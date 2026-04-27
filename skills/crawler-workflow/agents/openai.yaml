@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jisong Workflow"
+  short_description: "Route work into execution, cleanup, or tech-debt flow"
+  default_prompt: "Use $crawler-workflow to read the repository control docs, classify this task into the correct workflow, and then apply the matching crawler-workflow sub-skill."

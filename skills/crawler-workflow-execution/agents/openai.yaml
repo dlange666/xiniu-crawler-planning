@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jisong Workflow Execution"
+  short_description: "Apply the Planner, Generator, and Evaluator delivery loop"
+  default_prompt: "Use $crawler-workflow-execution to run this task through the repository delivery workflow, selecting the right role and following AGENTS.md exactly."

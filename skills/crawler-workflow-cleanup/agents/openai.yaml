@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jisong Workflow Cleanup"
+  short_description: "Run the Cleaner workflow and consolidate stale code"
+  default_prompt: "Use $crawler-workflow-cleanup to clean this repository, consolidate legacy or iterator-generated stale code into the latest maintained implementation, and keep the cleanup aligned with AGENTS.md."

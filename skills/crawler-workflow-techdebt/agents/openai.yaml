@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jisong Workflow Tech Debt"
+  short_description: "Track non-urgent debt without auto-promoting it into implementation"
+  default_prompt: "Use $crawler-workflow-techdebt to record this follow-up in the repository's tech-debt workflow without turning it into active implementation."
