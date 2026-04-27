@@ -118,7 +118,32 @@
 | 礼貌 | host 维度 429/5xx 比例 | < 1% |
 | 合规 | robots / 反爬命中后未尝试绕过 | = 100% |
 
-## 8. 不在 v1 范围
+## 8. 子模块布局与依赖
+
+业务域 `domains/gov_policy/` 内部按 DDD 子模块拆分：
+
+| 子模块 | 路径 | 职责 |
+|---|---|---|
+| `model` | `domains/gov_policy/model/` | 领域实体与规则：`Task`、`UrlRecord`、`FetchRecord`、`PolicyParsed`、`PolicyDocJSON`、`Attachment`、`SourceMetadata` |
+| `crawl` | `domains/gov_policy/crawl/` | seed 加载、调用 `infra/frontier` 派发、调用 `infra/http` 抓取、原始字节交 `sink` |
+| `render` | `domains/gov_policy/render/` | headless 渲染编排（M5 启用，MVP 占位） |
+| `parse` | `domains/gov_policy/parse/` | 站点适配器、元数据/正文/附件三段分离、链接抽取 |
+| `dedup` | `domains/gov_policy/dedup/` | 联合键 `(policy_title_norm, pub_code, content_sha256)` 严格去重 + simhash 信号 |
+| `extract` | `domains/gov_policy/extract/` | 36 字段 prompt + JSON schema + 调 `infra/ai` |
+| `sink` | `domains/gov_policy/sink/` | 通过 `infra/storage` 写元数据 + 原始档 |
+| `seeds` | `domains/gov_policy/seeds/` | 数据源 YAML 清单 |
+
+子模块依赖方向：
+
+```
+crawl   → infra/{frontier,http,robots,storage} · model · sink
+parse   → model · dedup · sink
+dedup   → model
+extract → infra/ai · model · sink
+sink    → infra/storage · model
+```
+
+## 9. 不在 v1 范围
 
 - 前端检索/解读/统计/对比/推送页面（产品同学规划，非本仓库交付）
 - PDF → 文本（TD-001）

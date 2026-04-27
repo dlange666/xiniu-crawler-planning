@@ -29,13 +29,13 @@
 | T-20260427-103 | [infra/http] 基础 HTTP 客户端 | `infra/http/client.py`：UA、cookie jar、超时、Retry-After 解析、指数退避 + 抖动、host 礼貌性令牌（per-host token bucket） | 单元测试：mock 一个 429+`Retry-After: 2` 站点，验证至少等 2 秒；普通 200 通过 | `pending` |
 | T-20260427-104 | [infra/robots] RFC 9309 实现 | 拉取 `/robots.txt`、缓存 24h、5xx → complete disallow；提供 `is_allowed(url, ua)` API | 单元测试覆盖 RFC 9309 五种典型情形（200 解析、404 全允许、5xx 全禁止、缓存命中、UA 匹配） | `pending` |
 | T-20260427-105 | [infra/frontier] 单进程两级队列 | `infra/frontier/`：全局优先级堆 + per-host ready queue；三类令牌：host 礼貌性、domain 配额、任务预算；提供 `submit(url, priority, source)`、`next_ready()` API | 单元测试：提交 30 URL 跨 3 host，验证 host 公平性与冷却命中 | `pending` |
-| T-20260427-106 | [domains/policy_crawl] 任务模型与 seed 管理 | `domains/policy_crawl/task.py`：定义 task 与 url 数据模型；CLI `scripts/run_crawl_task.py` 接受 seed YAML 并写入 frontier | `uv run scripts/run_crawl_task.py seeds/statecouncil.yaml` 可派发首批 URL；DB 中可查到 task_spec 与 url_record | `pending` |
-| T-20260427-107 | [domains/policy_crawl] 国务院文件库 fetcher | 站点适配器：解析列表页分页、详情页 URL；下载详情页 HTML 与同页元数据表；附件 PDF 仅落盘 OSS（dev 走本地）；不做 PDF→文本 | 跑 100 条政策，全部原始字节落盘；元数据表 + 正文 + 附件清单可被回放查询 | `pending` |
-| T-20260427-108 | [domains/policy_parse] 站点解析器 v1（国务院） | 把元数据表抽成 `source_metadata` 字典，正文抽成 `body_text`，附件清单抽成 `attachments`；同时在解析层调用去重模块 | 单元测试：5 个固定快照页面解析结果与黄金 JSON 一致 | `pending` |
-| T-20260427-109 | [domains/policy_dedup] 解析层严格去重 | 联合键 `(policy_title_norm, pub_code, content_sha256)` 一致才去重；不一致全部保留；额外算 simhash64 仅入信号表 | 单元测试：构造转载关系（同 pub_code 同正文 / 同 pub_code 改动正文），验证只去重前者 | `pending` |
-| T-20260427-110 | [M2] 8 个国务院部委适配器 | 复用 §107/§108 模式，对发改委、工信部、财政部、国家金融监督管理总局、证监会、国资委、人民银行、其他 各做一份适配器；按需扩展解析器 | 每部委跑 50 条，原始页落盘 100% + 解析合格率 ≥ 95% | `pending` |
-| T-20260427-111 | [infra/ai] LLM 客户端与 36 字段 prompt | `infra/ai/`：通用 LLM 客户端、prompt 模板、JSON schema（jsonschema 校验）；prompt 取自 `docs/prod-spec/policy-graph-v1.md` §5 + 研究底稿原文 | 单元测试：5 个固定政策跑出 JSON 全部通过 schema 校验，关键字段非空 | `pending` |
-| T-20260427-112 | [domains/policy_extract] 抽取流水线 | 从 metadata-store 拉解析后的政策文本 → 调 LLM → 校验 → 写 PolarDB（dev: SQLite）`policy_doc` 表 | 跑 100 条政策，schema 合格率 ≥ 90%，关键 6 字段联合准确率 ≥ 95%（人工抽样 30 条） | `pending` |
+| T-20260427-106 | [domains/gov_policy/model + crawl] 任务模型与 seed 管理 | `domains/gov_policy/model/`：定义 Task / UrlRecord / FetchRecord 等领域实体；`domains/gov_policy/crawl/`：seed 加载器与派发流程；`domains/gov_policy/seeds/statecouncil.yaml` 列出国务院文件库入口；CLI `scripts/run_crawl_task.py` 把 seed 写入 frontier | `uv run scripts/run_crawl_task.py domains/gov_policy/seeds/statecouncil.yaml` 可派发首批 URL；DB 中可查到 task_spec 与 url_record | `pending` |
+| T-20260427-107 | [domains/gov_policy/crawl] 国务院文件库 fetcher | 站点适配器：解析列表页分页、详情页 URL；下载详情页 HTML 与同页元数据表；附件 PDF 仅落盘 OSS（dev 走本地）；不做 PDF→文本 | 跑 100 条政策，全部原始字节通过 `infra/storage` 落盘；元数据表 + 正文 + 附件清单可被回放查询 | `pending` |
+| T-20260427-108 | [domains/gov_policy/parse] 站点解析器 v1（国务院） | 把元数据表抽成 `source_metadata` 字典，正文抽成 `body_text`，附件清单抽成 `attachments`；调用 `dedup` 模块；输出 `model.PolicyParsed` | 单元测试：5 个固定快照页面解析结果与黄金 JSON 一致 | `pending` |
+| T-20260427-109 | [domains/gov_policy/dedup] 解析层严格去重 | 联合键 `(policy_title_norm, pub_code, content_sha256)` 一致才去重；不一致全部保留；额外算 simhash64 仅入信号表 | 单元测试：构造转载关系（同 pub_code 同正文 / 同 pub_code 改动正文），验证只去重前者 | `pending` |
+| T-20260427-110 | [domains/gov_policy/{crawl,parse}] 8 个国务院部委适配器 | 复用 §107/§108 模式，对发改委、工信部、财政部、国家金融监督管理总局、证监会、国资委、人民银行、其他 各做一份适配器；按需扩展解析器；适配器实现统一接口（`SiteAdapter`）便于按 host 分发 | 每部委跑 50 条，原始页落盘 100% + 解析合格率 ≥ 95% | `pending` |
+| T-20260427-111 | [infra/ai] LLM 客户端与 prompt 框架 | `infra/ai/`：通用 LLM 客户端、prompt 模板装载、JSON schema 校验（jsonschema）；只放纯技术能力，不放 36 字段 prompt 文本 | 单元测试：mock 一个 LLM 后端，正反例 schema 校验全部通过 | `pending` |
+| T-20260427-112 | [domains/gov_policy/extract + sink] 抽取流水线 | 把 36 字段 prompt 文本与 schema 放在 `domains/gov_policy/extract/prompts/v1.md` + `schemas/policy_doc_v1.json`（业务事实）；从 store 拉解析后的政策文本 → 调 `infra/ai` → 校验 → 通过 `sink` 写 PolarDB（dev: SQLite）`policy_doc` 表 | 跑 100 条政策，schema 合格率 ≥ 90%，关键 6 字段联合准确率 ≥ 95%（人工抽样 30 条） | `pending` |
 | T-20260427-113 | [docs/eval-test] M3 验收报告 | 在 `docs/eval-test/` 写下 retained-vs-candidate 工件：抽样 30 条对照 prompt v1 vs v0（v0 = 仅元数据正则），覆盖关键字段准确率与 schema 合格率 | 工件存在且包含上述指标；Evaluator 签字 `green` | `pending` |
 
 ## 4. 边界护栏
