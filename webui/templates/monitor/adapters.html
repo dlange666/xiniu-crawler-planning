@@ -1,0 +1,39 @@
+{% extends "_base.html" %}
+{% block title %}Adapters · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Adapter registry</p>
+  <h1>已注册适配器</h1>
+  <p>来自 <code>infra.adapter_registry.list_all()</code>。</p>
+</section>
+
+<section class="surface">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Context</th>
+          <th>Host</th>
+          <th>Kind</th>
+          <th>Schema</th>
+          <th>Render</th>
+          <th>Verified</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for adapter in adapters %}
+        <tr>
+          <td>{{ adapter.business_context }}</td>
+          <td>{{ adapter.host }}</td>
+          <td>{{ adapter.data_kind }}</td>
+          <td>v{{ adapter.schema_version }}</td>
+          <td>{{ adapter.render_mode }}</td>
+          <td>{{ adapter.last_verified_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

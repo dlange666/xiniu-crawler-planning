@@ -1,14 +1,17 @@
 """SQLite 元数据存储（dev profile）。
 
 schema 来自 docs/prod-spec/data-model.md，类型按 §6 PolarDB↔SQLite 映射收敛。
-MVP 阶段仅实现采集链路必备表：
+MVP 阶段实现采集链路与 WebUI 必备表：
+  - crawl_task
+  - crawl_task_execution
   - url_record
   - fetch_record
   - crawl_raw
   - crawl_run_log
+  - webui_audit
 
-任务表（crawl_task / generation / execution / run）由外部 task 项目持有，
-本仓库 worker 仅消费 task_id；MVP 直接通过命令行参数注入 task_id，不建表。
+codegen 的外部 task 项目仍由 TaskSource 抽象对接；WebUI MVP 在本仓库维护
+采集任务后台所需的 crawl_task 子集。
 """
 
 from __future__ import annotations
@@ -23,6 +26,75 @@ from pathlib import Path
 # - BIGINT UNSIGNED AUTO_INCREMENT → INTEGER PRIMARY KEY AUTOINCREMENT
 # - DECIMAL → REAL
 SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS crawl_task (
+    task_id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    business_context        TEXT NOT NULL,
+    task_type               TEXT NOT NULL DEFAULT 'create'
+                            CHECK(task_type IN ('create','update','extend')),
+    site_url                TEXT NOT NULL,
+    host                    TEXT NOT NULL,
+    data_kind               TEXT NOT NULL DEFAULT 'policy',
+    scope_description       TEXT,
+    scope_mode              TEXT NOT NULL DEFAULT 'same_origin'
+                            CHECK(scope_mode IN (
+                                'same_origin','same_etld_plus_one',
+                                'url_pattern','allowlist'
+                            )),
+    scope_url_pattern       TEXT,
+    scope_follow_canonical  INTEGER NOT NULL DEFAULT 1,
+    scope_follow_pagination INTEGER NOT NULL DEFAULT 1,
+    crawl_mode              TEXT NOT NULL DEFAULT 'full'
+                            CHECK(crawl_mode IN ('full','incremental')),
+    crawl_until             TEXT,
+    full_crawl_cron         TEXT,
+    max_pages_per_run       INTEGER,
+    run_frequency           TEXT NOT NULL DEFAULT 'once',
+    schedule_time           TEXT,
+    schedule_minute         INTEGER,
+    robots_strict           INTEGER NOT NULL DEFAULT 1,
+    politeness_rps          REAL NOT NULL DEFAULT 0.500,
+    purpose                 TEXT,
+    legal_basis             TEXT,
+    responsible_party       TEXT,
+    priority                INTEGER NOT NULL DEFAULT 5,
+    created_by              TEXT,
+    created_at              TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at              TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_context_kind
+    ON crawl_task(business_context, data_kind);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_host ON crawl_task(host);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_created ON crawl_task(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS crawl_task_execution (
+    task_id                INTEGER PRIMARY KEY,
+    status                 TEXT NOT NULL DEFAULT 'scheduled'
+                           CHECK(status IN (
+                               'scheduled','running',
+                               'canary_stage_0','canary_stage_1',
+                               'canary_stage_2','canary_stage_3',
+                               'completed','failed','disabled','rolled_back'
+                           )),
+    adapter_host           TEXT,
+    adapter_schema_version INTEGER,
+    next_run_at            TEXT,
+    last_run_at            TEXT,
+    last_run_id            TEXT,
+    last_run_status        TEXT,
+    last_full_crawl_at     TEXT,
+    canary_stage_until     TEXT,
+    run_count              INTEGER NOT NULL DEFAULT 0,
+    consecutive_failures   INTEGER NOT NULL DEFAULT 0,
+    worker_id              TEXT,
+    claim_at               TEXT,
+    heartbeat_at           TEXT,
+    FOREIGN KEY (task_id) REFERENCES crawl_task(task_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_execution_status_next
+    ON crawl_task_execution(status, next_run_at);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_execution_adapter
+    ON crawl_task_execution(adapter_host);
+
 CREATE TABLE IF NOT EXISTS url_record (
     task_id              INTEGER NOT NULL,
     url_fp               TEXT NOT NULL,
@@ -105,6 +177,23 @@ CREATE TABLE IF NOT EXISTS crawl_run_log (
     finished_at        TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_crawl_run_log_task ON crawl_run_log(task_id);
+
+CREATE TABLE IF NOT EXISTS webui_audit (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    actor        TEXT NOT NULL,
+    role         TEXT NOT NULL,
+    action       TEXT NOT NULL,
+    target_type  TEXT,
+    target_id    TEXT,
+    payload      TEXT,
+    ip           TEXT,
+    user_agent   TEXT,
+    request_id   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_webui_audit_actor_ts ON webui_audit(actor, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_webui_audit_action_ts ON webui_audit(action, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_webui_audit_target ON webui_audit(target_type, target_id);
 """
 
 

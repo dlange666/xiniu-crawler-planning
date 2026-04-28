@@ -28,7 +28,7 @@
 | `infra-deployment.md` | 主从分布 / 自建分发 / SKIP LOCKED / master lease | MVP 单进程；扩展期升级（TD-015） |
 | **Infra · 可观测与可视化** | | |
 | `infra-observability.md` | 采集负载 / 存储 / AI 成本指标 + cron 告警 + LiteLLM | MVP 暂缓（TD-013） |
-| `webui.md` | Webui · 任务后台 + 采集监控 + 结果浏览（FastAPI + Jinja2 + Chart.js） · AuthBackend 抽象 | MVP 实施（OAuth 暂缓 TD-018） |
+| `webui.md` | Webui · 任务后台 + 采集监控 + 结果浏览（FastAPI `/api/*` + React + Ant Design ProComponents） · AuthBackend 抽象 | React 重写实施（OAuth 暂缓 TD-018） |
 | **Infra · 通用爬虫引擎** | | |
 | `infra-crawl-engine.md` | CrawlEngine 契约 / BFS-DFS routing order / 4 scope mode / 递归发现 / 翻页 helper | MVP 已实现核心 |
 | **Codegen 平台** | | |

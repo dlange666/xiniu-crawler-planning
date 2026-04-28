@@ -1,0 +1,22 @@
+{% extends "_base.html" %}
+{% block title %}结果 · Task {{ task.task_id }}{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">crawl_raw</p>
+  <h1>任务 {{ task.task_id }} 结果浏览</h1>
+  <p>严格服务端分页：每页最多 50 条。</p>
+</section>
+
+<section class="surface result-list">
+  {% for item in items %}
+  <article>
+    <span>#{{ item.id }} · {{ item.host }} · {{ item.created_at }}</span>
+    <h2><a href="/tasks/{{ task.task_id }}/items/{{ item.id }}">{{ item.title }}</a></h2>
+    <p>{{ item.body_text[:220] }}</p>
+  </article>
+  {% else %}
+  <p class="empty">暂无 crawl_raw 结果。</p>
+  {% endfor %}
+</section>
+{% endblock %}
+

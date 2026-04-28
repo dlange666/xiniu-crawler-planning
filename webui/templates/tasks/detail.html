@@ -1,0 +1,125 @@
+{% extends "_base.html" %}
+{% block title %}任务 {{ task.task_id }} · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Task #{{ task.task_id }}</p>
+    <h1>{{ task.host }}</h1>
+  </div>
+  <div class="actions">
+    <a class="secondary-action" href="/tasks/{{ task.task_id }}/items">查看结果</a>
+    <button class="danger-action" data-cancel-task="{{ task.task_id }}">取消任务</button>
+  </div>
+</section>
+
+<section class="metric-strip">
+  <div><strong>{{ task.status }}</strong><span>状态</span></div>
+  <div><strong>{{ url_total }}</strong><span>URL records</span></div>
+  <div><strong>{{ progress.get("pending", 0) }}</strong><span>Pending URL</span></div>
+  <div><strong>{{ progress.get("done", 0) }}</strong><span>Done URL</span></div>
+</section>
+
+<section class="split">
+  <div class="surface">
+    <div class="section-title">
+      <h2>任务参数</h2>
+      <span>{{ task.created_by or "unknown" }}</span>
+    </div>
+    <dl class="kv">
+      <dt>Site URL</dt><dd>{{ task.site_url }}</dd>
+      <dt>Context</dt><dd>{{ task.business_context }}</dd>
+      <dt>Data kind</dt><dd>{{ task.data_kind }}</dd>
+      <dt>Crawl mode</dt><dd>{{ task.crawl_mode }}</dd>
+      <dt>Scope</dt><dd>{{ task.scope_mode }}</dd>
+      <dt>RPS</dt><dd>{{ task.politeness_rps }}</dd>
+    </dl>
+  </div>
+  <div class="surface">
+    <div class="section-title">
+      <h2>抓取时序</h2>
+      <span>API: <code>/api/tasks/{{ task.task_id }}/timeseries</code></span>
+    </div>
+    <div class="chart-surface" data-timeseries-task="{{ task.task_id }}"></div>
+  </div>
+</section>
+
+<section class="surface source-drilldown">
+  <div class="section-title">
+    <div>
+      <h2>Source URL 明细</h2>
+      <span>
+        {{ url_offset + 1 if url_total else 0 }}-{{ [url_offset + urls|length, url_total]|min }}
+        / {{ url_total }} · API: <code>/api/tasks/{{ task.task_id }}/urls</code>
+      </span>
+    </div>
+    <div class="pager">
+      {% if url_offset > 0 %}
+      <a class="secondary-action" href="/tasks/{{ task.task_id }}?url_offset={{ [url_offset - url_limit, 0]|max }}&url_limit={{ url_limit }}">上一页</a>
+      {% else %}
+      <span class="pager-disabled">上一页</span>
+      {% endif %}
+      {% if url_offset + url_limit < url_total %}
+      <a class="secondary-action" href="/tasks/{{ task.task_id }}?url_offset={{ url_offset + url_limit }}&url_limit={{ url_limit }}">下一页</a>
+      {% else %}
+      <span class="pager-disabled">下一页</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="depth-strip">
+    {% for item in depth_summary %}
+    <div>
+      <strong>depth {{ item.depth }}</strong>
+      <span>{{ item.url_count }} URLs</span>
+    </div>
+    {% else %}
+    <p class="empty">暂无 URL 发现记录。</p>
+    {% endfor %}
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-depth">Depth</th>
+          <th>URL</th>
+          <th class="col-state">State</th>
+          <th class="col-source">Source</th>
+          <th class="col-fetch">Fetch</th>
+          <th>内容</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in urls %}
+        <tr>
+          <td class="col-depth">{{ row.depth }}</td>
+          <td class="url-cell">
+            <a href="{{ row.url }}" target="_blank" rel="noreferrer">{{ row.url }}</a>
+            <small>{{ row.url_fp }}</small>
+          </td>
+          <td><span class="status">{{ row.frontier_state }}</span></td>
+          <td>{{ row.discovery_source or "—" }}</td>
+          <td>
+            {% if row.status_code %}
+            HTTP {{ row.status_code }}
+            {% elif row.error_kind %}
+            {{ row.error_kind }}
+            {% else %}
+            —
+            {% endif %}
+          </td>
+          <td class="content-cell">
+            {% if row.raw_id %}
+            <a href="/tasks/{{ task.task_id }}/items/{{ row.raw_id }}">{{ row.raw_title }}</a>
+            <small>{{ row.raw_excerpt }}</small>
+            {% else %}
+            <span class="muted">未入库</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

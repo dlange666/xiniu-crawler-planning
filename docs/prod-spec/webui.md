@@ -1,5 +1,5 @@
 # Webui · 任务后台 + 采集监控 + 结果浏览（自建轻量看板）
-> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 7 · **最近修订**：2026-04-28 · **状态**：active
 >
 > **实施状态**：MVP 实施（替代原 TD-014）。OAuth 接入暂缓（TD-018）；MVP 用
 > `DevBackend` 免登模式跑通。
@@ -11,8 +11,9 @@
 > 2. 看在跑任务进度、host 健康、失败堆栈（监控）
 > 3. 翻 `crawl_raw` 看采集结果、原始 HTML（浏览）
 >
-> 三件事共用一个 FastAPI 应用，靠路由分组而不是分仓。本 spec 给出**单进程内嵌
-> Web 服务 + 服务端渲染 + 外部 OAuth**（MVP 用 DevBackend 占位）的最小方案。
+> 三件事共用一个 FastAPI API 服务和一个 React 前端。本 spec 给出**FastAPI
+> `/api/*` + React / Ant Design Pro 前端 + 外部 OAuth**（MVP 用 DevBackend
+> 占位）的最小方案。
 
 ## 1. 范围
 
@@ -40,25 +41,23 @@
 ## 2. 技术栈
 
 ```
-浏览器 ─→ FastAPI（同 crawler 进程或独立进程，二选一）
-            ├─ Jinja2 模板 → HTML（SSR）
-            ├─ /api/*    → JSON ─→ Chart.js 客户端绘图
-            └─ 静态资源  → Chart.js（本地静态，不走 CDN）
-            │
-            └─→ 读 PolarDB / SQLite（业务表 + 观测表）
+浏览器 ─→ React SPA（Ant Design Pro / ProComponents）
+            └─ /api/* JSON ─→ FastAPI（同 crawler 进程或独立进程，二选一）
+                              └─→ 读 PolarDB / SQLite（业务表 + 观测表）
 ```
 
 | 组件 | 选型 | 理由 |
 |---|---|---|
-| Web 框架 | FastAPI | 已是 crawler 默认依赖，不引入新栈 |
-| 模板 | Jinja2 | 标准、无依赖 |
-| 图表 | Chart.js（本地静态） | 单文件，零构建 |
+| API 框架 | FastAPI | 保持 crawler 后端依赖与鉴权/审计入口 |
+| 前端框架 | React + TypeScript + Vite | 明确进入真实前端工程，不再用 Jinja 仿制复杂后台 |
+| UI 框架 | Ant Design + Ant Design ProComponents | 直接使用成熟后台组件（ProLayout / PageContainer / ProTable / StatisticCard） |
+| 图表 | Ant Design 统计组件 + 后续可接 AntV | MVP 先展示任务、URL、状态；复杂图表后续接入 |
 | 鉴权（MVP） | `DevBackend`（env 注入用户名 + role，免登） | 本地 / 内网受信环境足够 |
 | 鉴权（生产） | OAuth 2.0 + OIDC（Authorization Code + PKCE）+ 签名 cookie | 不在本仓库存凭据；TD-018 |
-| 静态资源 | FastAPI 自带 StaticFiles | 不引入 CDN/Nginx |
+| 静态资源 | FastAPI 托管 `webui/frontend/dist` | standalone 部署时一个进程即可打开 WebUI |
 | Session | `starlette.SessionMiddleware`（签名 cookie，无服务端 session 存储） | 多副本无状态 |
 
-**没有**：Vue/React、TS/前端构建、Webpack、单独的 Node 服务、Grafana、Tableau、本地密码库、Redis session。
+**没有**：Vue、Webpack、单独的 Node 生产服务、Grafana、Tableau、本地密码库、Redis session、CDN 运行时依赖。
 
 ## 3. 目录与代码落点
 
@@ -75,23 +74,19 @@ webui/                         ← 顶层（与 infra/ domains/ docs/ 平级）
 │   ├── roles.py               claims → role 映射
 │   └── deps.py                current_user / require_role FastAPI dependency
 ├── routes/
-│   ├── tasks.py               [A] /tasks*
-│   ├── monitor.py             [B] /、/monitor、/hosts、/adapters、/api/*
-│   ├── browse.py              [C] /tasks/{id}/items、/browse*
+│   ├── tasks.py               /api/tasks*
+│   ├── monitor.py             /api/health、/api/version、/api/adapters
+│   ├── browse.py              /api/tasks/{id}/items*
 │   └── admin.py               [A] /admin/*
 ├── stores/                    数据访问层（只读 SQL，与 infra.storage 分离）
 │   ├── task_store.py          crawl_task CRUD
 │   ├── progress_store.py      url_record / fetch_record 聚合
 │   └── audit_store.py         webui_audit 写入
-├── templates/
-│   ├── _base.html             共用 nav / 鉴权状态 / role 显示
-│   ├── tasks/                 任务列表 / 详情 / 提交表单
-│   ├── monitor/
-│   ├── browse/
-│   └── errors/                401/403/404/5xx
-└── static/
-    ├── chart.min.js
-    └── webui.css
+├── frontend/
+│   ├── package.json           React / Ant Design Pro 依赖
+│   ├── vite.config.ts         dev server 代理 /api 到 FastAPI
+│   └── src/                   页面、API client、主题
+└── templates/、static/         rev 5 Jinja 版本遗留；React 版稳定后清理
 scripts/
 └── run_webui.py               独立入口（uvicorn webui.app:app）
 ```
@@ -230,26 +225,38 @@ WEBUI_AUTH_ROLE_MAP_VIEWER   = ["*authenticated*"]
 
 ### 7.1 页面
 
+WebUI 必须先提供可操作的浏览器页面；API 是页面的数据源，不替代页面本身。
+rev 6 起前端使用 React + Ant Design ProComponents，不再用 Jinja/CSS 仿制
+复杂后台。视觉参考同类数据后台产品：深色/白色左侧导航、蓝色主操作、紧凑表格、
+浅灰工作台背景、低留白密度、可快速扫描的指标卡与状态标签。
+
 | 路径 | 内容 |
 |---|---|
-| `/` | 首页：在跑任务卡片（进度条、最近 1h 抓取量、当前 AI 成本）；本月 AI 成本汇总；OSS 用量趋势（成本类暂依赖 TD-013） |
-| `/tasks` | 列表：状态 / business_context 筛选；分页；显示 `created_by` |
-| `/tasks/new` | 提交表单：seed_host / entry_urls / strategy / max_depth / scope / RPS |
-| `/tasks/{id}` | 详情：上半屏参数 + 操作（cancel / pause / 复制启动命令）；下半屏漏斗 + 时序图 + 失败列表 |
-| `/tasks/{id}/items[/{n}]` | crawl_raw 翻页 + 单条预览（标题、body、attachments、原始 HTML 链接） |
-| `/monitor` | 全局监控（跨任务） |
-| `/hosts[/{host}]` | host 列表 / 详情（依赖 TD-013） |
-| `/adapters` | 已注册 adapter 列表（`infra.adapter_registry.list_all()`），含 `last_verified_at` / `render_mode` |
+| `/ui`、`/ui/tasks` | React 任务列表：状态 / business_context 筛选；分页；显示 `created_by` |
+| `/ui/tasks/{id}` | React source 详情：URL 数量、depth 分布、frontier 状态；分开展示已抓取链接（fetch/raw 结果）与跳转链接（已发现待抓 URL），均服务端分页 |
+| `/ui/adapters` | React adapter 列表（`infra.adapter_registry.list_all()`），含 `last_verified_at` / `render_mode` |
+| `/ui/monitor` | React 全局监控（跨任务，TD-013 前降级） |
 | `/alerts` | 告警历史（TD-013） |
 | `/spend` | LiteLLM 成本（TD-013） |
 | `/admin/*` | 管理操作（admin 角色） |
 
 ### 7.2 API
 
+API 由 FastAPI 提供，同一进程内服务页面与 JSON。页面内的表格/图表必须至少覆盖：
+
+- `/tasks` 展示 `GET /api/tasks` 的任务列表数据
+- `/tasks/{id}` 展示 `GET /api/tasks/{id}/timeseries` 的时序数据
+- `/tasks/{id}` 分开展示 source 结果：已抓取链接表展示 fetch 状态与 `crawl_raw` 内容摘要；跳转链接表展示从页面发现但尚未 fetch 的 URL、depth、parent 与 discovery_source
+- `/monitor` 展示跨任务聚合后的时序/状态数据
+- `/tasks/{id}/items` 展示 `crawl_raw` 分页结果；大字段服务端分页，不一次性拉全量 JSON
+
 | 端点 | 返回 | 鉴权 |
 |---|---|---|
 | `GET /api/tasks` | 任务列表（分页） | viewer |
+| `GET /api/tasks/{id}` | 单任务详情 + progress | viewer |
 | `GET /api/tasks/{id}/timeseries?metric=...&from=...&to=...` | 单任务指标时间序列 | viewer |
+| `GET /api/tasks/{id}/urls?kind=all|fetched|jump&depth=&limit=50&offset=0` | 单 source URL 明细：total / limit / offset / depth_summary / items；`fetched` 返回已抓取链接与 fetch/raw 摘要，`jump` 返回已发现待抓跳转链接，`depth` 用于查看指定层级 | viewer |
+| `GET /api/adapters` | adapter registry JSON | viewer |
 | `GET /api/hosts/{host}/timeseries?metric=...` | 单 host 指标时间序列（TD-013） | viewer |
 | `GET /api/spend?scope=...&from=...&to=...` | AI 成本聚合（TD-013） | viewer |
 | `GET /api/alerts?from=...&limit=100` | 告警历史（TD-013） | viewer |
@@ -300,6 +307,9 @@ WEBUI_AUTH_ROLE_MAP_VIEWER   = ["*authenticated*"]
 ## 12. 验收点
 
 - 本地用 DevBackend 起 webui，所有 GET 路由 200 ms 内返回
+- React 页面可见，不是纯 JSON API；页面能展示 FastAPI `/api/*` 返回的数据
+- `cd webui/frontend && npm run build` 成功；FastAPI 可托管 `dist` 后的 `/ui`
+- 点进 `/tasks/{id}` 后能看到该 source 的 URL 数量、depth 分布；已抓取链接与跳转链接必须分开展示并各自分页；跳转链接可按 depth 过滤；已有 `crawl_raw` 时同页能看到内容标题/摘要
 - 提交一个新任务 → `crawl_task` 行写入 + `created_by` 填充 + `webui_audit` 一行
 - 跑完任务后 `/tasks/{id}/items` 能翻 crawl_raw 列表，点开能看到原始 HTML
 - `WEBUI_ENV=production` + `AUTH_MODE=dev` 启动时立即失败
@@ -321,3 +331,8 @@ WEBUI_AUTH_ROLE_MAP_VIEWER   = ["*authenticated*"]
 |---|---|---|---|
 | rev 1 | 2026-04-28 | 初稿（仅监控看板） | — |
 | rev 2 | 2026-04-28 | **[breaking]** 重构为"任务后台 + 监控 + 浏览三面合一"；代码落点从 `infra/visualization/` 改为顶层 `webui/`；引入 `AuthBackend` 抽象（DevBackend 默认，OAuthBackend 暂缓 TD-018）；三档角色 + 路由权限矩阵；引入 `webui_audit` 表；MVP 转为实施（替代 TD-014 暂缓状态） | 用户决策 2026-04-28；新增 TD-018 |
+| rev 3 | 2026-04-28 | 明确 WebUI 必须提供可见浏览器页面；FastAPI 同时服务页面与 `/api/*`，页面通过本地开源前端库或原生 JS 展示 API 返回的数据；禁止 CDN 运行时依赖，保留无 Node 构建约束 | 用户决策 2026-04-28 |
+| rev 4 | 2026-04-28 | 任务详情页升级为 source drill-down：展示 URL 数量、depth 分布、frontier/fetch 状态和已采集内容摘要；新增 `GET /api/tasks/{id}/urls` | 用户决策 2026-04-28 |
+| rev 5 | 2026-04-28 | source drill-down 改为紧凑 Ant Design 风格并加入 URL 服务端分页；明确完整 Ant Design Pro/React 版需另开 breaking 计划 | 用户决策 2026-04-28 |
+| rev 6 | 2026-04-28 | **[breaking]** 前端从 Jinja/CSS 仿制升级为 React + TypeScript + Vite + Ant Design ProComponents；FastAPI 保留 `/api/*` 并托管 `/ui` SPA | 用户决策 2026-04-28 |
+| rev 7 | 2026-04-28 | 任务详情页把已抓取链接与跳转/发现链接拆成两张独立分页表；`GET /api/tasks/{id}/urls` 新增 `kind` 与 `depth` 查询参数，支持查看 `task=1&depth=1` 的跳转链接 | 用户决策 2026-04-28 |

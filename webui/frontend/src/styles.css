@@ -1,0 +1,136 @@
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background: #fff;
+}
+
+.ant-pro-layout,
+.ant-pro-layout-bg-list,
+.ant-pro-layout-container,
+.ant-layout {
+  background: #fff !important;
+}
+
+.ant-pro-sider,
+.ant-layout-sider,
+.ant-pro-layout .ant-layout-sider {
+  background: #fff !important;
+  border-inline-end: 1px solid #eef0f5;
+}
+
+.ant-pro-global-header,
+.ant-pro-layout .ant-layout-header {
+  background: #fff !important;
+  border-bottom: 1px solid #eef0f5;
+}
+
+.ant-pro-layout .ant-pro-layout-content {
+  padding-block: 10px;
+  padding-inline: 14px;
+}
+
+.ant-pro-page-container-children-container {
+  padding-inline: 0 !important;
+  padding-block-start: 10px !important;
+}
+
+.ant-pro-page-container .ant-page-header {
+  padding-block: 8px;
+}
+
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border: 1px solid #eef0f5;
+  border-radius: 8px;
+  background: #eef0f5;
+}
+
+.summary-bar div {
+  padding: 9px 14px;
+  background: #fff;
+}
+
+.summary-bar span {
+  display: block;
+  color: #697386;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.summary-bar strong {
+  display: block;
+  color: #151b2d;
+  font-size: 20px;
+  line-height: 26px;
+}
+
+.summary-bar.dense div {
+  padding-block: 10px;
+}
+
+.compact-card {
+  margin-bottom: 12px;
+}
+
+.url-sections .ant-pro-card-body {
+  padding: 10px 12px 4px;
+}
+
+.url-sections .ant-pro-card-header {
+  padding-block: 10px;
+}
+
+.state-counts {
+  display: block;
+  margin-top: 10px;
+}
+
+.depth-tag {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.url-table .ant-pro-card-body {
+  padding-block-start: 0;
+}
+
+.tasks-table {
+  margin-top: 8px;
+}
+
+.ant-pro-card {
+  box-shadow: none;
+}
+
+.ant-table-thead > tr > th {
+  color: #5d667a !important;
+  background: #f7f9fc !important;
+  font-size: 12px;
+  font-weight: 600 !important;
+}
+
+.ant-table-tbody > tr > td {
+  padding-block: 7px !important;
+}
+
+.ant-pagination {
+  margin-block: 10px !important;
+  margin-inline-end: 12px !important;
+}
+
+.mono {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .summary-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

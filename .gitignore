@@ -1,14 +1,24 @@
 .venv/
 venv/
+env/
+ENV/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.ipynb_checkpoints/
 
 runtime/db/*.db
 runtime/db/*.db-journal
+runtime/db/*.db-wal
+runtime/db/*.db-shm
 runtime/raw/
 runtime/cache/
 runtime/logs/
@@ -16,7 +26,16 @@ runtime/logs/
 .env
 .env.*
 !.env.example
+*.log
+*.tmp
+*.swp
 
 .DS_Store
+.claude/
 .idea/
 .vscode/
+
+build/
+dist/
+*.egg-info/
+node_modules/

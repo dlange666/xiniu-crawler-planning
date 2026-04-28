@@ -1,0 +1,48 @@
+{% extends "_base.html" %}
+{% block title %}总览 · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Operations overview</p>
+  <h1>采集任务总览</h1>
+  <a class="primary-action" href="/tasks/new">提交任务</a>
+</section>
+
+<section class="metric-strip" data-monitor-summary>
+  <div><strong>{{ tasks|length }}</strong><span>最近任务</span></div>
+  <div><strong data-summary-running>0</strong><span>运行中</span></div>
+  <div><strong data-summary-completed>0</strong><span>已完成</span></div>
+  <div><strong data-summary-failed>0</strong><span>异常/禁用</span></div>
+</section>
+
+<section class="surface">
+  <div class="section-title">
+    <h2>任务流</h2>
+    <span>来自 <code>GET /api/tasks</code></span>
+  </div>
+  <div class="table-wrap">
+    <table data-api-table="tasks">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Host</th>
+          <th>状态</th>
+          <th>Raw</th>
+          <th>创建人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td><a href="/tasks/{{ task.task_id }}">{{ task.task_id }}</a></td>
+          <td>{{ task.host }}</td>
+          <td><span class="status">{{ task.status }}</span></td>
+          <td>{{ task.raw_count }}</td>
+          <td>{{ task.created_by or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+

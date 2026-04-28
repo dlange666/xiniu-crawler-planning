@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Crawler WebUI{% endblock %}</title>
+    <link rel="stylesheet" href="/static/webui.css">
+  </head>
+  <body>
+    <aside class="shell-nav">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <strong>xiniu crawler</strong>
+          <small>WebUI · rev 3</small>
+        </div>
+      </div>
+      <nav>
+        <a href="/">总览</a>
+        <a href="/tasks">任务</a>
+        <a href="/monitor">监控</a>
+        <a href="/adapters">Adapters</a>
+        <a href="/hosts">Hosts</a>
+      </nav>
+      <div class="user-chip">
+        <span>{{ user.email }}</span>
+        <strong>{{ user.role }}</strong>
+      </div>
+    </aside>
+    <main class="workspace">
+      {% block body %}{% endblock %}
+    </main>
+    <script src="/static/webui.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% block title %}监控 · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Monitor</p>
+  <h1>跨任务监控</h1>
+  <p>首版从任务表、URL frontier、fetch 记录和 crawl_raw 降级聚合。</p>
+</section>
+
+<section class="surface">
+  <div class="section-title">
+    <h2>任务状态分布</h2>
+    <span>API: <code>/api/tasks</code></span>
+  </div>
+  <div class="chart-surface" data-status-chart></div>
+</section>
+{% endblock %}
+

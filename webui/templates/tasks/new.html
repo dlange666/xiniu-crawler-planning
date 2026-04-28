@@ -1,0 +1,52 @@
+{% extends "_base.html" %}
+{% block title %}新建任务 · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Submit task</p>
+  <h1>提交采集任务</h1>
+  <p>写入 <code>crawl_task</code>，并由审计中间件写入 <code>webui_audit</code>。</p>
+</section>
+
+<form class="surface form-grid" method="post" action="/tasks">
+  <label>业务上下文
+    <input name="business_context" value="gov_policy">
+  </label>
+  <label>入口 URL
+    <input name="site_url" required placeholder="https://www.ndrc.gov.cn/...">
+  </label>
+  <label>数据类型
+    <input name="data_kind" value="policy">
+  </label>
+  <label>采集模式
+    <select name="crawl_mode">
+      <option value="full">full</option>
+      <option value="incremental">incremental</option>
+    </select>
+  </label>
+  <label>Scope
+    <select name="scope_mode">
+      <option value="same_origin">same_origin</option>
+      <option value="same_etld_plus_one">same_etld_plus_one</option>
+      <option value="url_pattern">url_pattern</option>
+      <option value="allowlist">allowlist</option>
+    </select>
+  </label>
+  <label>Scope URL Pattern
+    <input name="scope_url_pattern" placeholder="optional regex">
+  </label>
+  <label>Max Pages
+    <input name="max_pages_per_run" type="number" min="1" placeholder="optional">
+  </label>
+  <label>RPS
+    <input name="politeness_rps" type="number" step="0.1" min="0.1" value="0.5">
+  </label>
+  <label>用途
+    <input name="purpose" placeholder="采集用途">
+  </label>
+  <label>责任人
+    <input name="responsible_party" placeholder="owner">
+  </label>
+  <button class="primary-action" type="submit">提交任务</button>
+</form>
+{% endblock %}
+

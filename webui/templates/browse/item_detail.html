@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+{% block title %}Raw #{{ item.id }} · Task {{ task.task_id }}{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Raw item #{{ item.id }}</p>
+  <h1>{{ item.title }}</h1>
+  <a class="secondary-action" href="/tasks/{{ task.task_id }}/items">返回列表</a>
+</section>
+
+<section class="split">
+  <div class="surface">
+    <div class="section-title">
+      <h2>正文预览</h2>
+      <span>{{ item.url }}</span>
+    </div>
+    <p class="body-preview">{{ item.body_text }}</p>
+  </div>
+  <aside class="surface">
+    <div class="section-title">
+      <h2>元数据</h2>
+      <span>{{ item.raw_blob_uri }}</span>
+    </div>
+    <dl class="kv">
+      {% for key, value in item.source_metadata.items() %}
+      <dt>{{ key }}</dt><dd>{{ value }}</dd>
+      {% endfor %}
+      <dt>Attachments</dt><dd>{{ item.attachments|length }}</dd>
+    </dl>
+  </aside>
+</section>
+{% endblock %}

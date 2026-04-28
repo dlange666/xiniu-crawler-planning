@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+{% block title %}Hosts · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Hosts</p>
+  <h1>Host 列表</h1>
+  <p>TD-013 前先按任务 host 降级展示。</p>
+</section>
+
+<section class="surface host-list">
+  {% for host in hosts %}
+  <a href="/hosts/{{ host }}">{{ host }}</a>
+  {% else %}
+  <p class="empty">暂无 host。</p>
+  {% endfor %}
+</section>
+{% endblock %}
+

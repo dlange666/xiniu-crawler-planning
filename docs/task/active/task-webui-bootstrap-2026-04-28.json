@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "WebUI MVP：FastAPI 页面与 API 联通，页面展示任务、监控和 crawl_raw 数据。",
+  "pr_name": "webui-bootstrap",
+  "branch": "agent/feature-20260428-webui-bootstrap",
+  "date": "2026-04-28",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260428-301",
+      "title": "[webui] FastAPI UI/API MVP 联通",
+      "status": "verifying",
+      "plan_id": "plan-20260428-webui-bootstrap",
+      "spec_ref": "webui.md §2, §3, §4, §5, §6, §7, §12；data-model.md §4.1, §4.7",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T18:15:00Z",
+      "notes": "已实现紧凑 Ant Design 风格 source drill-down 与 URL 服务端分页；/api/tasks/{id}/urls 返回 total/limit/offset/depth_summary/items。验证：uv run pytest tests/webui -q -> 4 passed；uv run ruff check webui tests/webui -> passed。待 PR 创建后标 completed。"
+    },
+    {
+      "id": "T-20260428-302",
+      "title": "[webui/frontend] React + Ant Design Pro 重写",
+      "status": "verifying",
+      "plan_id": "plan-20260428-webui-bootstrap",
+      "spec_ref": "webui.md rev 7 §2, §3, §7, §12",
+      "dependency": ["T-20260428-301"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T19:55:00Z",
+      "notes": "已实现任务详情已抓取链接与跳转/发现链接分离展示；/api/tasks/{id}/urls 支持 kind=fetched|jump|all 与 depth 过滤。验证：npm run build -> passed；uv run pytest tests/webui -q -> 5 passed；uv run ruff check webui tests/webui -> passed。runtime/db/dev.db 当前 task=1：已抓取 7，depth=1 跳转链接 143，crawl_raw 0。待 PR 创建后标 completed。"
+    }
+  ]
+}

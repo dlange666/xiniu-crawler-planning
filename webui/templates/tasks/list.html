@@ -1,0 +1,45 @@
+{% extends "_base.html" %}
+{% block title %}任务 · Crawler WebUI{% endblock %}
+{% block body %}
+<section class="page-head">
+  <p class="eyebrow">Tasks</p>
+  <h1>采集任务</h1>
+  <a class="primary-action" href="/tasks/new">新建任务</a>
+</section>
+
+<section class="surface">
+  <div class="section-title">
+    <h2>任务列表</h2>
+    <span>页面会调用 <code>GET /api/tasks</code> 刷新表格</span>
+  </div>
+  <div class="table-wrap">
+    <table data-api-table="tasks">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Context</th>
+          <th>Host</th>
+          <th>状态</th>
+          <th>URL</th>
+          <th>Raw</th>
+          <th>创建人</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td><a href="/tasks/{{ task.task_id }}">{{ task.task_id }}</a></td>
+          <td>{{ task.business_context }}</td>
+          <td>{{ task.host }}</td>
+          <td><span class="status">{{ task.status }}</span></td>
+          <td>{{ task.url_count }}</td>
+          <td>{{ task.raw_count }}</td>
+          <td>{{ task.created_by or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
