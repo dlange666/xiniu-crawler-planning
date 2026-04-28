@@ -335,6 +335,8 @@ class CrawlEngine:
                 {"url": a.url, "filename": a.filename, "mime": a.mime}
                 for a in detail.attachments
             ],
+            "interpret_links": detail.interpret_links,
+            "raw_links": detail.raw_links,
             "raw_links_count": len(detail.raw_links),
             "interpret_links_count": len(detail.interpret_links),
             "discovery_source": item.discovery_source,

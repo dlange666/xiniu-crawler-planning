@@ -180,8 +180,11 @@ def api_task_urls(
     user: User = VIEWER,
 ):
     _ = user
-    if kind not in {"all", "fetched", "jump"}:
-        raise HTTPException(status_code=400, detail="kind must be all, fetched, or jump")
+    if kind not in {"all", "collected", "uncollected", "fetched", "jump"}:
+        raise HTTPException(
+            status_code=400,
+            detail="kind must be all, collected, uncollected, fetched, or jump",
+        )
     limit = max(1, min(limit, 100))
     offset = max(0, offset)
     return {

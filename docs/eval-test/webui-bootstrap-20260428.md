@@ -39,6 +39,10 @@ SQLite 任务表和 `webui_audit` 的联通。
 | API 联通 | green | `/api/tasks` 返回任务列表；`/api/tasks/{id}/timeseries` 返回 series |
 | Source drill-down | green | `/tasks/{id}` 展示 URL 明细；`/api/tasks/{id}/urls` 返回 depth 分布、URL 状态和 raw 摘要 |
 | 已抓取/跳转链接分离 | green | `/api/tasks/{id}/urls?kind=fetched` 只返回 fetch/raw 结果；`/api/tasks/{id}/urls?kind=jump&depth=2` 只返回待抓跳转链接；React 详情页拆成两张独立分页表 |
+| 站内采集详情 | green | `/api/tasks/{id}/items/{raw_id}` 返回 `crawl_raw` 标题/正文/metadata；React `/ui/tasks/{id}/items/{raw_id}` 由 SPA 托管；已抓取链接不外跳源站 |
+| 单表 Tabs 切换 | green | `/api/tasks/{id}/urls?kind=collected` 返回有 `crawl_raw` 的已采集行；`kind=uncollected` 返回无 `crawl_raw` 的未采集行；React 详情页用单个表格通过“全部 / 已采集 / 未采集”切换 |
+| 列表内容列收敛 | green | URL 列表内容列只显示“查看采集详情”按钮或未采集状态，不在列表中展示标题/正文摘要；正文仅在站内详情页展示 |
+| 子链接展示 | green | `/api/tasks/{id}/items/{raw_id}` 返回 `child_links`；React 详情页在 `Attachments` 下直接展开附件、解读等 depth+1 子链接，附件行优先显示附件名称 |
 | URL 分页与紧凑 UI | green | `/api/tasks/{id}/urls` 返回 `total/limit/offset`；详情页显示当前范围与上一页/下一页 |
 | React / Ant Design Pro 重写 | green | `webui/frontend` 使用 React + TypeScript + Vite + Ant Design ProComponents；`npm run build` 成功；FastAPI `/ui` 可托管构建产物 |
 | 写审计 | green | `POST /tasks` 后 `crawl_task.created_by=alice@local`，`webui_audit.action=submit_task` |
@@ -73,3 +77,7 @@ SQLite 任务表和 `webui_audit` 的联通。
 | rev 3 | 2026-04-28 | 补充紧凑 Ant Design 风格与 URL 服务端分页验收 |
 | rev 4 | 2026-04-28 | 补充 React + Ant Design ProComponents 重写验收 |
 | rev 5 | 2026-04-28 | 补充已抓取链接与跳转/发现链接分离、depth 过滤验收 |
+| rev 6 | 2026-04-28 | 补充站内采集详情页验收：已抓取链接进入 `crawl_raw` 详情，不外跳源站 |
+| rev 7 | 2026-04-28 | 补充单表 Tabs 验收：全部 / 已采集 / 未采集 |
+| rev 8 | 2026-04-28 | 补充 URL 列表内容列收敛验收：列表只显示按钮/状态，不显示正文摘要 |
+| rev 9 | 2026-04-28 | 补充采集详情页子链接验收：附件、解读等 depth+1 链接在 `Attachments` 下结构化展示，附件优先显示名称 |

@@ -92,7 +92,15 @@ def seed_task(db_path: Path) -> int:
                     "title": "政策样例",
                     "body_text": "正文内容",
                     "source_metadata": {"发布机关": "NDRC"},
-                    "attachments": [],
+                    "attachments": [
+                        {
+                            "url": "https://www.ndrc.gov.cn/a.pdf",
+                            "filename": "a.pdf",
+                            "mime": "application/pdf",
+                        }
+                    ],
+                    "interpret_links": ["https://www.ndrc.gov.cn/jd/a.html"],
+                    "raw_links": ["https://www.ndrc.gov.cn/extra.html"],
                 },
                 ensure_ascii=False,
             ),
@@ -147,6 +155,18 @@ def test_pages_render_and_api_data_is_available(tmp_path: Path) -> None:
     assert urls_payload["items"][0]["frontier_state"] == "done"
     assert urls_payload["items"][0]["raw_title"] == "政策样例"
 
+    collected_response = client.get(f"/api/tasks/{task_id}/urls?kind=collected")
+    assert collected_response.status_code == 200
+    collected_payload = collected_response.json()
+    assert collected_payload["total"] == 1
+    assert collected_payload["items"][0]["raw_title"] == "政策样例"
+
+    uncollected_response = client.get(f"/api/tasks/{task_id}/urls?kind=uncollected")
+    assert uncollected_response.status_code == 200
+    uncollected_payload = uncollected_response.json()
+    assert uncollected_payload["total"] == 1
+    assert uncollected_payload["items"][0]["raw_id"] is None
+
     fetched_response = client.get(f"/api/tasks/{task_id}/urls?kind=fetched")
     assert fetched_response.status_code == 200
     fetched_payload = fetched_response.json()
@@ -162,6 +182,21 @@ def test_pages_render_and_api_data_is_available(tmp_path: Path) -> None:
     assert jump_payload["items"][0]["link_kind"] == "jump"
     assert jump_payload["items"][0]["parent_url_fp"] == "fp-1"
 
+    item_id = fetched_payload["items"][0]["raw_id"]
+    item_response = client.get(f"/api/tasks/{task_id}/items/{item_id}")
+    assert item_response.status_code == 200
+    item_payload = item_response.json()
+    assert item_payload["item"]["title"] == "政策样例"
+    assert item_payload["item"]["body_text"] == "正文内容"
+    assert item_payload["item"]["url"] == "https://www.ndrc.gov.cn/a.html"
+    assert item_payload["item"]["child_links"][0]["link_type"] == "attachment"
+    assert item_payload["item"]["child_links"][0]["filename"] == "a.pdf"
+    assert {link["link_type"] for link in item_payload["item"]["child_links"]} == {
+        "attachment",
+        "interpret",
+        "link",
+    }
+
     detail_html = client.get(f"/tasks/{task_id}").text
     assert "Source URL 明细" in detail_html
     assert "1-2" in detail_html
@@ -171,9 +206,10 @@ def test_pages_render_and_api_data_is_available(tmp_path: Path) -> None:
 
 def test_react_spa_endpoint_serves_html(tmp_path: Path) -> None:
     client = make_client(tmp_path)
-    response = client.get("/ui/tasks")
-    assert response.status_code in {200, 503}
-    assert "text/html" in response.headers["content-type"]
+    for path in ["/ui/tasks", "/ui/tasks/1/items/1"]:
+        response = client.get(path)
+        assert response.status_code in {200, 503}
+        assert "text/html" in response.headers["content-type"]
 
 
 def test_create_task_writes_created_by_and_webui_audit(tmp_path: Path) -> None:

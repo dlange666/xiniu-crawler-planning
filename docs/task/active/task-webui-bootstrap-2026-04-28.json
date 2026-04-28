@@ -23,11 +23,11 @@
       "title": "[webui/frontend] React + Ant Design Pro 重写",
       "status": "verifying",
       "plan_id": "plan-20260428-webui-bootstrap",
-      "spec_ref": "webui.md rev 7 §2, §3, §7, §12",
+      "spec_ref": "webui.md rev 12 §2, §3, §7, §12",
       "dependency": ["T-20260428-301"],
       "assignee": "generator",
-      "last_updated": "2026-04-28T19:55:00Z",
-      "notes": "已实现任务详情已抓取链接与跳转/发现链接分离展示；/api/tasks/{id}/urls 支持 kind=fetched|jump|all 与 depth 过滤。验证：npm run build -> passed；uv run pytest tests/webui -q -> 5 passed；uv run ruff check webui tests/webui -> passed。runtime/db/dev.db 当前 task=1：已抓取 7，depth=1 跳转链接 143，crawl_raw 0。待 PR 创建后标 completed。"
+      "last_updated": "2026-04-28T22:05:00Z",
+      "notes": "已实现用户反馈：采集详情页入库信息 label 固定列宽对齐；详情页附件/解读等 depth+1 子链接直接展开在 Attachments 下面，附件优先显示可点击文件名并保留可复制 URL；新采集 payload 会保存 interpret_links/raw_links。验证：npm run build -> passed；uv run pytest tests/webui -q -> 5 passed；uv run ruff check webui tests/webui infra/crawl/runner.py -> passed；uv run pytest -q -> 81 passed。待 PR 创建后标 completed。"
     }
   ]
 }

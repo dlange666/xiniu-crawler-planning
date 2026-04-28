@@ -7,8 +7,8 @@ import {
   Descriptions,
   Empty,
   Flex,
-  Select,
   Space,
+  Tabs,
   Tag,
   Typography,
   theme,
@@ -59,6 +59,7 @@ type UrlRecord = {
 };
 
 type DepthSummary = Array<{ depth: number; url_count: number }>;
+type UrlTabKey = 'all' | 'collected' | 'uncollected';
 
 type Adapter = {
   business_context: string;
@@ -70,9 +71,38 @@ type Adapter = {
   module_path: string;
 };
 
+type RawItem = {
+  id: number;
+  task_id: number;
+  business_context: string;
+  host: string;
+  url: string;
+  raw_blob_uri: string;
+  created_at: string;
+  title: string;
+  body_text: string;
+  source_metadata: Record<string, unknown>;
+  attachments: Array<{ url: string; filename?: string | null; mime?: string | null }>;
+  child_links: ChildLink[];
+};
+
+type ChildLink = {
+  url: string;
+  depth?: number | null;
+  discovery_source?: string;
+  frontier_state: string;
+  status_code?: number | null;
+  error_kind?: string | null;
+  raw_id?: number | null;
+  link_type: 'attachment' | 'interpret' | 'link';
+  filename?: string | null;
+  mime?: string | null;
+};
+
 type RouteState =
   | { name: 'tasks' }
   | { name: 'task'; taskId: number }
+  | { name: 'item'; taskId: number; itemId: number }
   | { name: 'adapters' }
   | { name: 'monitor' };
 
@@ -84,6 +114,10 @@ async function api<T>(path: string): Promise<T> {
 
 function parseRoute(): RouteState {
   const path = window.location.pathname.replace(/^\/ui/, '') || '/tasks';
+  const itemMatch = path.match(/^\/tasks\/(\d+)\/items\/(\d+)$/);
+  if (itemMatch) {
+    return { name: 'item', taskId: Number(itemMatch[1]), itemId: Number(itemMatch[2]) };
+  }
   const taskMatch = path.match(/^\/tasks\/(\d+)$/);
   if (taskMatch) return { name: 'task', taskId: Number(taskMatch[1]) };
   if (path === '/adapters') return { name: 'adapters' };
@@ -184,71 +218,68 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
     fetched_total: number;
     jump_total: number;
   } | null>(null);
-  const [fetchedUrls, setFetchedUrls] = useState<UrlRecord[]>([]);
-  const [jumpUrls, setJumpUrls] = useState<UrlRecord[]>([]);
-  const [fetchedTotal, setFetchedTotal] = useState(0);
-  const [jumpTotal, setJumpTotal] = useState(0);
-  const [fetchedLoading, setFetchedLoading] = useState(false);
-  const [jumpLoading, setJumpLoading] = useState(false);
-  const [jumpDepth, setJumpDepth] = useState<number | 'all'>('all');
+  const [urlItems, setUrlItems] = useState<UrlRecord[]>([]);
+  const [urlTotal, setUrlTotal] = useState(0);
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [activeUrlTab, setActiveUrlTab] = useState<UrlTabKey>('all');
 
   const loadDetail = async () => {
     const data = await api<NonNullable<typeof detail>>(`/api/tasks/${taskId}`);
     setDetail(data);
-    const firstDeepJump = data.jump_depth_summary.find((item) => item.depth > 0);
-    if (firstDeepJump) setJumpDepth(firstDeepJump.depth);
   };
 
-  const loadFetchedUrls = async (current = 1, pageSize = 10) => {
-    setFetchedLoading(true);
-    try {
-      const data = await api<{ items: UrlRecord[]; total: number }>(
-        `/api/tasks/${taskId}/urls?kind=fetched&limit=${pageSize}&offset=${(current - 1) * pageSize}`,
-      );
-      setFetchedUrls(data.items);
-      setFetchedTotal(data.total);
-    } finally {
-      setFetchedLoading(false);
-    }
-  };
-
-  const loadJumpUrls = async (
+  const loadUrls = async (
     current = 1,
     pageSize = 10,
-    depth: number | 'all' = jumpDepth,
+    kind: UrlTabKey = activeUrlTab,
   ) => {
-    setJumpLoading(true);
+    setUrlLoading(true);
     try {
-      const params = new URLSearchParams({
-        kind: 'jump',
-        limit: String(pageSize),
-        offset: String((current - 1) * pageSize),
-      });
-      if (depth !== 'all') params.set('depth', String(depth));
       const data = await api<{ items: UrlRecord[]; total: number }>(
-        `/api/tasks/${taskId}/urls?${params.toString()}`,
+        `/api/tasks/${taskId}/urls?kind=${kind}&limit=${pageSize}&offset=${(current - 1) * pageSize}`,
       );
-      setJumpUrls(data.items);
-      setJumpTotal(data.total);
+      setUrlItems(data.items);
+      setUrlTotal(data.total);
     } finally {
-      setJumpLoading(false);
+      setUrlLoading(false);
     }
   };
 
   useEffect(() => {
     void loadDetail();
-    void loadFetchedUrls();
   }, [taskId]);
 
   useEffect(() => {
-    void loadJumpUrls(1, 10, jumpDepth);
-  }, [taskId, jumpDepth]);
+    void loadUrls(1, 10, activeUrlTab);
+  }, [taskId, activeUrlTab]);
 
   if (!detail) {
     return <PageContainer title={`Task #${taskId}`}><ProCard loading /></PageContainer>;
   }
 
   const { task, progress, depth_summary: depthSummary } = detail;
+  const collectedTotal = progress.raw || 0;
+  const uncollectedTotal = Math.max(detail.url_total - collectedTotal, 0);
+  const renderUrl = (row: UrlRecord) => (
+    <Space direction="vertical" size={0}>
+      <Typography.Text>{row.url}</Typography.Text>
+      <Typography.Text type="secondary" className="mono">{row.url_fp}</Typography.Text>
+    </Space>
+  );
+  const renderContent = (row: UrlRecord) => {
+    if (row.raw_id) {
+      return (
+        <Button type="link" className="inline-link" onClick={() => navigate(`/tasks/${taskId}/items/${row.raw_id}`)}>
+          查看采集详情
+        </Button>
+      );
+    }
+    if (row.status_code || row.error_kind) {
+      return <Typography.Text type="secondary">已抓取，未生成采集内容</Typography.Text>;
+    }
+    return <Typography.Text type="secondary">未采集</Typography.Text>;
+  };
+
   return (
     <PageContainer
       title={task.host}
@@ -258,8 +289,8 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
       <div className="summary-bar dense">
         <div><span>状态</span><strong>{task.status}</strong></div>
         <div><span>URL records</span><strong>{detail.url_total}</strong></div>
-        <div><span>已抓取链接</span><strong>{detail.fetched_total}</strong></div>
-        <div><span>跳转链接</span><strong>{detail.jump_total}</strong></div>
+        <div><span>已采集</span><strong>{collectedTotal}</strong></div>
+        <div><span>未采集</span><strong>{uncollectedTotal}</strong></div>
       </div>
 
       <ProCard split="vertical" gutter={12} className="compact-card" bodyStyle={{ padding: 0 }}>
@@ -288,128 +319,161 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
         </ProCard>
       </ProCard>
 
-      <ProCard split="horizontal" gutter={10} bodyStyle={{ padding: 0 }} className="url-sections">
-        <ProCard
-          title="已抓取链接"
-          subTitle="fetch_record / crawl_raw 结果"
-          extra={<Typography.Text type="secondary">API: /api/tasks/{task.task_id}/urls?kind=fetched</Typography.Text>}
-        >
-          <ProTable<UrlRecord>
-            className="url-table"
-            rowKey="url_fp"
-            loading={fetchedLoading}
-            dataSource={fetchedUrls}
-            search={false}
-            options={false}
-            cardBordered={false}
-            cardProps={{ bodyStyle: { padding: 0 } }}
-            pagination={{
-              total: fetchedTotal,
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
-              onChange: (page, pageSize) => void loadFetchedUrls(page, pageSize),
-            }}
-            columns={[
-              { title: 'Depth', dataIndex: 'depth', width: 74 },
-              {
-                title: '抓取链接',
-                dataIndex: 'url',
-                ellipsis: true,
-                render: (_, row) => (
-                  <Space direction="vertical" size={0}>
-                    <Typography.Link href={row.url} target="_blank">{row.url}</Typography.Link>
-                    <Typography.Text type="secondary" className="mono">{row.url_fp}</Typography.Text>
-                  </Space>
-                ),
-              },
-              { title: 'State', dataIndex: 'frontier_state', width: 110, render: (_, row) => <StatusTag value={row.frontier_state} /> },
-              {
-                title: 'Fetch',
-                width: 120,
-                render: (_, row) => row.status_code ? `HTTP ${row.status_code}` : (row.error_kind || '—'),
-              },
-              {
-                title: '内容',
-                width: 260,
-                render: (_, row) => row.raw_id
-                  ? (
-                    <Space direction="vertical" size={0}>
-                      <Typography.Text>{row.raw_title}</Typography.Text>
-                      <Typography.Text type="secondary" ellipsis>{row.raw_excerpt}</Typography.Text>
-                    </Space>
-                  )
-                  : <Typography.Text type="secondary">已抓取，暂无 crawl_raw 内容</Typography.Text>,
-              },
-            ]}
-          />
-        </ProCard>
+      <ProCard
+        title="URL 列表"
+        subTitle="通过 crawl_raw 是否存在区分采集状态"
+        extra={<Typography.Text type="secondary">{`API: /api/tasks/${task.task_id}/urls?kind=${activeUrlTab}`}</Typography.Text>}
+        bodyStyle={{ padding: '8px 12px 4px' }}
+        className="url-sections"
+      >
+        <Tabs
+          activeKey={activeUrlTab}
+          onChange={(key) => setActiveUrlTab(key as UrlTabKey)}
+          items={[
+            { key: 'all', label: `全部 ${detail.url_total}` },
+            { key: 'collected', label: `已采集 ${collectedTotal}` },
+            { key: 'uncollected', label: `未采集 ${uncollectedTotal}` },
+          ]}
+        />
+        <ProTable<UrlRecord>
+          className="url-table"
+          rowKey="url_fp"
+          loading={urlLoading}
+          dataSource={urlItems}
+          search={false}
+          options={false}
+          cardBordered={false}
+          cardProps={{ bodyStyle: { padding: 0 } }}
+          pagination={{
+            total: urlTotal,
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
+            onChange: (page, pageSize) => void loadUrls(page, pageSize),
+          }}
+          columns={[
+            { title: 'Depth', dataIndex: 'depth', width: 74 },
+            {
+              title: 'URL',
+              dataIndex: 'url',
+              ellipsis: true,
+              render: (_, row) => renderUrl(row),
+            },
+            { title: 'State', dataIndex: 'frontier_state', width: 110, render: (_, row) => <StatusTag value={row.frontier_state} /> },
+            { title: 'Source', dataIndex: 'discovery_source', width: 140 },
+            {
+              title: 'Fetch',
+              width: 120,
+              render: (_, row) => row.status_code ? `HTTP ${row.status_code}` : (row.error_kind || '—'),
+            },
+            {
+              title: '内容',
+              width: 300,
+              render: (_, row) => renderContent(row),
+            },
+          ]}
+        />
+      </ProCard>
+    </PageContainer>
+  );
+}
 
-        <ProCard
-          title="跳转链接"
-          subTitle="已发现，等待后续抓取"
-          extra={(
-            <Space>
-              <Typography.Text type="secondary">Depth</Typography.Text>
-              <Select
-                size="small"
-                value={jumpDepth}
-                style={{ width: 120 }}
-                onChange={(value) => setJumpDepth(value)}
-                options={[
-                  { label: '全部', value: 'all' },
-                  ...detail.jump_depth_summary.map((item) => ({
-                    label: `depth ${item.depth}`,
-                    value: item.depth,
-                  })),
-                ]}
-              />
-            </Space>
-          )}
-        >
-          <ProTable<UrlRecord>
-            className="url-table"
-            rowKey="url_fp"
-            loading={jumpLoading}
-            dataSource={jumpUrls}
-            search={false}
-            options={false}
-            cardBordered={false}
-            cardProps={{ bodyStyle: { padding: 0 } }}
-            pagination={{
-              total: jumpTotal,
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
-              onChange: (page, pageSize) => void loadJumpUrls(page, pageSize),
-            }}
-            columns={[
-              { title: 'Depth', dataIndex: 'depth', width: 74 },
-              {
-                title: '跳转链接',
-                dataIndex: 'url',
-                ellipsis: true,
-                render: (_, row) => (
-                  <Space direction="vertical" size={0}>
-                    <Typography.Link href={row.url} target="_blank">{row.url}</Typography.Link>
-                    <Typography.Text type="secondary" className="mono">{row.url_fp}</Typography.Text>
-                  </Space>
-                ),
-              },
-              { title: 'State', dataIndex: 'frontier_state', width: 110, render: (_, row) => <StatusTag value={row.frontier_state} /> },
-              { title: 'Source', dataIndex: 'discovery_source', width: 140 },
-              {
-                title: 'Parent',
-                dataIndex: 'parent_url_fp',
-                width: 180,
-                render: (_, row) => row.parent_url_fp
-                  ? <Typography.Text type="secondary" className="mono">{row.parent_url_fp}</Typography.Text>
-                  : <Typography.Text type="secondary">seed</Typography.Text>,
-              },
-            ]}
-          />
+function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
+  const [detail, setDetail] = useState<{ task: Task; item: RawItem } | null>(null);
+
+  useEffect(() => {
+    setDetail(null);
+    void api<{ task: Task; item: RawItem }>(`/api/tasks/${taskId}/items/${itemId}`)
+      .then((data) => setDetail(data));
+  }, [taskId, itemId]);
+
+  if (!detail) {
+    return <PageContainer title={`Raw #${itemId}`}><ProCard loading /></PageContainer>;
+  }
+
+  const { task, item } = detail;
+  const metadataEntries = Object.entries(item.source_metadata || {});
+  const childLinks = item.child_links || [];
+  const renderChildLinkType = (row: ChildLink) => {
+    const label = row.link_type === 'attachment'
+      ? '附件'
+      : row.link_type === 'interpret'
+        ? '解读'
+        : '链接';
+    return <Tag color={row.link_type === 'attachment' ? 'orange' : 'blue'}>{label}</Tag>;
+  };
+
+  return (
+    <PageContainer
+      title={item.title}
+      subTitle={`Task #${task.task_id} · Raw #${item.id} · ${item.host}`}
+      extra={<Button onClick={() => navigate(`/tasks/${taskId}`)}>返回 Source</Button>}
+    >
+      <ProCard split="vertical" gutter={12} className="compact-card" bodyStyle={{ padding: 0 }}>
+        <ProCard title="采集内容" colSpan="64%">
+          <Typography.Paragraph className="body-preview">
+            {item.body_text || '暂无正文内容。'}
+          </Typography.Paragraph>
+        </ProCard>
+        <ProCard title="入库信息" className="storage-info-card">
+          <div className="storage-info-list">
+            <div className="storage-info-row">
+              <div className="storage-info-label">源 URL</div>
+              <div className="storage-info-value">
+              <Typography.Text copyable>{item.url}</Typography.Text>
+              </div>
+            </div>
+            <div className="storage-info-row">
+              <div className="storage-info-label">Raw blob</div>
+              <div className="storage-info-value">
+              <Typography.Text copyable>{item.raw_blob_uri}</Typography.Text>
+              </div>
+            </div>
+            <div className="storage-info-row">
+              <div className="storage-info-label">Created at</div>
+              <div className="storage-info-value">{item.created_at}</div>
+            </div>
+            <div className="storage-info-row">
+              <div className="storage-info-label">Attachments</div>
+              <div className="storage-info-value">
+              <Space direction="vertical" size={6} className="attachment-list">
+                <Typography.Text>{item.attachments?.length || 0}</Typography.Text>
+                {childLinks.map((row) => (
+                  <div className="attachment-list-item" key={row.url}>
+                    <Space size={6} align="start">
+                      {renderChildLinkType(row)}
+                      <Space direction="vertical" size={0}>
+                        <Typography.Link href={row.url} target="_blank" rel="noreferrer" strong={row.link_type === 'attachment'}>
+                          {row.filename || row.url}
+                        </Typography.Link>
+                        <Typography.Text type="secondary" copyable>
+                          {row.url}
+                        </Typography.Text>
+                      </Space>
+                    </Space>
+                  </div>
+                ))}
+              </Space>
+              </div>
+            </div>
+          </div>
         </ProCard>
       </ProCard>
+
+      <ProCard title="Source metadata" className="compact-card">
+        {metadataEntries.length ? (
+          <Descriptions column={2} size="small">
+            {metadataEntries.map(([key, value]) => (
+              <Descriptions.Item label={key} key={key}>
+                {String(value)}
+              </Descriptions.Item>
+            ))}
+          </Descriptions>
+        ) : (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 source metadata" />
+        )}
+      </ProCard>
+
     </PageContainer>
   );
 }
@@ -458,7 +522,7 @@ function Shell() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const selectedKey = route.name === 'task' ? '/tasks' : `/${route.name}`;
+  const selectedKey = route.name === 'task' || route.name === 'item' ? '/tasks' : `/${route.name}`;
   return (
     <ProLayout
       title="烯牛采集平台"
@@ -481,6 +545,7 @@ function Shell() {
       )}
     >
       {route.name === 'task' && <TaskDetailPage taskId={route.taskId} />}
+      {route.name === 'item' && <TaskItemPage taskId={route.taskId} itemId={route.itemId} />}
       {route.name === 'tasks' && <TasksPage />}
       {route.name === 'adapters' && <AdaptersPage />}
       {route.name === 'monitor' && <MonitorPage />}

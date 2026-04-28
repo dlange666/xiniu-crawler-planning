@@ -10,6 +10,7 @@ from pathlib import Path
 @dataclass(frozen=True)
 class WebuiConfig:
     db_path: Path = Path("runtime/db/dev.db")
+    blob_root: Path = Path("runtime/raw")
     auth_mode: str = "dev"
     env: str = "development"
     dev_user: str = "operator@local"
@@ -22,6 +23,7 @@ class WebuiConfig:
     def from_env(cls) -> WebuiConfig:
         return cls(
             db_path=Path(os.environ.get("CRAWLER_DB_PATH", "runtime/db/dev.db")),
+            blob_root=Path(os.environ.get("CRAWLER_BLOB_ROOT", "runtime/raw")),
             auth_mode=os.environ.get("WEBUI_AUTH_MODE", "dev"),
             env=os.environ.get("WEBUI_ENV", "development"),
             dev_user=os.environ.get("WEBUI_DEV_USER", "operator@local"),

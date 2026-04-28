@@ -60,3 +60,18 @@ def task_item_detail(
         "browse/item_detail.html",
         {"user": user, "task": task, "item": item},
     )
+
+
+@router.get("/api/tasks/{task_id}/items/{item_id}")
+def api_task_item_detail(
+    task_id: int,
+    item_id: int,
+    request: Request,
+    user: User = VIEWER,
+):
+    _ = user
+    task = request.app.state.task_store.get_task(task_id)
+    item = request.app.state.task_store.get_item(task_id, item_id)
+    if task is None or item is None:
+        raise HTTPException(status_code=404, detail="item not found")
+    return {"task": task, "item": item}

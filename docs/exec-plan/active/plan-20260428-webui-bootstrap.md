@@ -18,7 +18,7 @@
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
 | T-20260428-301 | [webui] FastAPI UI/API MVP 联通 | `webui.md` rev 5；`data-model.md` §4.1, §4.7 | 新增顶层 `webui/`；FastAPI + Jinja2 MVP 页面；`/api/tasks` 与 `/api/tasks/{id}/timeseries`；DevBackend；SQLite MVP 表；写审计 | pytest 覆盖页面 200、API JSON、POST 新任务写 `crawl_task` + `webui_audit`、viewer 写操作 403、production+dev 拒绝启动 | `verifying` |
-| T-20260428-302 | [webui/frontend] React + Ant Design Pro 重写 | `webui.md` rev 7 §2, §3, §7, §12 | 新增 `webui/frontend`：React + TypeScript + Vite + Ant Design ProComponents；FastAPI 新增 `/api/tasks/{id}`、`/api/adapters` 并托管 `/ui` SPA；前端实现任务列表、source 详情、已抓取链接与跳转链接分离分页、adapter 列表 | `npm run build` 成功；pytest 覆盖新增 API；本地 `/ui` 可访问并展示 runtime DB 数据 | `in_progress` |
+| T-20260428-302 | [webui/frontend] React + Ant Design Pro 重写 | `webui.md` rev 12 §2, §3, §7, §12 | 新增 `webui/frontend`：React + TypeScript + Vite + Ant Design ProComponents；FastAPI 新增 `/api/tasks/{id}`、`/api/adapters`、`/api/tasks/{id}/items/{raw_id}` 并托管 `/ui` SPA；前端实现任务列表、source 详情单表 Tabs（全部 / 已采集 / 未采集）、列表只显示按钮/状态、站内采集详情页、详情页 Attachments 下展开 depth+1 子链接、adapter 列表 | `npm run build` 成功；pytest 覆盖新增 API；本地 `/ui` 可访问并展示 runtime DB 数据 | `in_progress` |
 
 ## 4. 边界护栏
 

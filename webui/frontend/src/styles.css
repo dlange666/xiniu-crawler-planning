@@ -129,6 +129,55 @@ body,
   font-size: 11px;
 }
 
+.inline-link {
+  height: auto;
+  padding: 0;
+}
+
+.body-preview {
+  max-height: 58vh;
+  margin-bottom: 0 !important;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.72;
+}
+
+.storage-info-list {
+  display: grid;
+  gap: 12px;
+}
+
+.storage-info-row {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+}
+
+.storage-info-label {
+  color: #697386;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.storage-info-value {
+  min-width: 0;
+  text-align: left;
+  word-break: break-all;
+}
+
+.attachment-list {
+  width: 100%;
+}
+
+.attachment-list-item {
+  padding-block: 4px;
+}
+
+.attachment-list-item + .attachment-list-item {
+  border-top: 1px solid #eef0f5;
+}
+
 @media (max-width: 900px) {
   .summary-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));

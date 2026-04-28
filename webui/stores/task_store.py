@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -10,7 +11,7 @@ from urllib.parse import urlparse
 
 from infra.storage.sqlite_store import SqliteMetadataStore
 
-UrlKind = Literal["all", "fetched", "jump"]
+UrlKind = Literal["all", "collected", "uncollected", "fetched", "jump"]
 
 
 class TaskStore:
@@ -196,6 +197,7 @@ class TaskStore:
     ) -> list[dict[str, Any]]:
         where_sql, params = _url_filter_sql(task_id, kind=kind, depth=depth)
         params.extend([limit, offset])
+        order_sql = _url_order_sql(kind)
         conn = self._connect()
         try:
             rows = conn.execute(
@@ -223,7 +225,7 @@ class TaskStore:
                   ON cr.task_id = u.task_id
                  AND (cr.url = u.url OR cr.canonical_url = u.canonical_url)
                 {where_sql}
-                ORDER BY u.depth ASC, u.created_at ASC, u.url_fp ASC
+                ORDER BY {order_sql}
                 LIMIT ? OFFSET ?""",
                 (task_id, *params),
             ).fetchall()
@@ -318,9 +320,87 @@ class TaskStore:
                 "SELECT * FROM crawl_raw WHERE task_id = ? AND id = ?",
                 (task_id, item_id),
             ).fetchone()
-            return _item_dict(row) if row else None
+            if row is None:
+                return None
+            item = _item_dict(row)
+            item["child_links"] = self._child_links(conn, task_id=task_id, item=item)
+            return item
         finally:
             conn.close()
+
+    def _child_links(
+        self, conn: sqlite3.Connection, *, task_id: int, item: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        parent_fp = hashlib.sha256(str(item["url"]).encode("utf-8")).hexdigest()[:32]
+        rows = conn.execute(
+            """SELECT
+                u.url, u.depth, u.discovery_source, u.frontier_state,
+                fr.status_code, fr.error_kind, cr.id AS raw_id
+            FROM url_record u
+            LEFT JOIN (
+                SELECT f1.*
+                FROM fetch_record f1
+                JOIN (
+                    SELECT task_id, url_fp, MAX(attempt) AS max_attempt
+                    FROM fetch_record
+                    WHERE task_id = ?
+                    GROUP BY task_id, url_fp
+                ) latest
+                  ON latest.task_id = f1.task_id
+                 AND latest.url_fp = f1.url_fp
+                 AND latest.max_attempt = f1.attempt
+            ) fr ON fr.task_id = u.task_id AND fr.url_fp = u.url_fp
+            LEFT JOIN crawl_raw cr
+              ON cr.task_id = u.task_id
+             AND (cr.url = u.url OR cr.canonical_url = u.canonical_url)
+            WHERE u.task_id = ? AND u.parent_url_fp = ?
+            ORDER BY u.depth ASC, u.created_at ASC, u.url_fp ASC""",
+            (task_id, task_id, parent_fp),
+        ).fetchall()
+
+        links: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for row in rows:
+            link = _row_dict(row)
+            link["link_type"] = _child_link_type(link.get("discovery_source"), str(link["url"]))
+            links.append(link)
+            seen.add(str(link["url"]))
+
+        for attachment in item.get("attachments") or []:
+            url = str(attachment.get("url") or "")
+            if not url or url in seen:
+                continue
+            links.append(
+                {
+                    "url": url,
+                    "depth": None,
+                    "discovery_source": "detail_to_attachment",
+                    "frontier_state": "discovered",
+                    "status_code": None,
+                    "error_kind": None,
+                    "raw_id": None,
+                    "link_type": "attachment",
+                    "filename": attachment.get("filename"),
+                    "mime": attachment.get("mime"),
+                }
+            )
+            seen.add(url)
+
+        for url in item.get("interpret_links") or []:
+            url = str(url)
+            if not url or url in seen:
+                continue
+            links.append(_raw_child_link(url, "detail_to_interpret", "interpret"))
+            seen.add(url)
+
+        for url in item.get("raw_links") or []:
+            url = str(url)
+            if not url or url in seen:
+                continue
+            links.append(_raw_child_link(url, "detail_raw_link", _child_link_type(None, url)))
+            seen.add(url)
+
+        return links
 
 
 def _optional_int(value: Any) -> int | None:
@@ -340,6 +420,8 @@ def _item_dict(row: sqlite3.Row) -> dict[str, Any]:
     out["body_text"] = data.get("body_text") or ""
     out["source_metadata"] = data.get("source_metadata") or {}
     out["attachments"] = data.get("attachments") or []
+    out["interpret_links"] = data.get("interpret_links") or []
+    out["raw_links"] = data.get("raw_links") or []
     return out
 
 
@@ -361,7 +443,7 @@ def _url_record_dict(row: sqlite3.Row) -> dict[str, Any]:
 def _url_filter_sql(
     task_id: int, *, kind: UrlKind, depth: int | None = None
 ) -> tuple[str, list[Any]]:
-    if kind not in {"all", "fetched", "jump"}:
+    if kind not in {"all", "collected", "uncollected", "fetched", "jump"}:
         raise ValueError(f"unsupported url kind: {kind}")
 
     where = ["u.task_id = ?"]
@@ -369,7 +451,11 @@ def _url_filter_sql(
     if depth is not None:
         where.append("u.depth = ?")
         params.append(depth)
-    if kind == "fetched":
+    if kind == "collected":
+        where.append("cr.id IS NOT NULL")
+    elif kind == "uncollected":
+        where.append("cr.id IS NULL")
+    elif kind == "fetched":
         where.append(
             """(
                 u.frontier_state IN ('done', 'failed', 'dlq')
@@ -384,3 +470,37 @@ def _url_filter_sql(
             AND cr.id IS NULL"""
         )
     return "WHERE " + " AND ".join(where), params
+
+
+def _url_order_sql(kind: UrlKind) -> str:
+    if kind in {"all", "collected", "fetched"}:
+        return (
+            "CASE WHEN cr.id IS NULL THEN 1 ELSE 0 END ASC, "
+            "cr.id DESC, u.depth ASC, u.created_at ASC, u.url_fp ASC"
+        )
+    return "u.depth ASC, u.created_at ASC, u.url_fp ASC"
+
+
+def _child_link_type(discovery_source: Any, url: str) -> str:
+    source = str(discovery_source or "")
+    lower = url.lower()
+    if source == "detail_to_attachment" or lower.endswith(
+        (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ofd")
+    ):
+        return "attachment"
+    if source == "detail_to_interpret":
+        return "interpret"
+    return "link"
+
+
+def _raw_child_link(url: str, discovery_source: str, link_type: str) -> dict[str, Any]:
+    return {
+        "url": url,
+        "depth": None,
+        "discovery_source": discovery_source,
+        "frontier_state": "discovered",
+        "status_code": None,
+        "error_kind": None,
+        "raw_id": None,
+        "link_type": link_type,
+    }
