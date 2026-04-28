@@ -1,0 +1,110 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "codegen-task-file",
+  "description": "codegen-most: 为 www.most.gov.cn（科技部）生成政策文件采集适配器",
+  "pr_name": "codegen-most",
+  "branch": "agent/feature-20260428-codegen-most",
+  "date": "2026-04-28",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260428-501",
+      "title": "[站点探查] fetch 列表页，分析详情 URL 模式",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §2",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "列表页为静态 HTML；主政策详情路径限定为 flfg/bmgz/gfxwj，排除 zcjd 解读列表。"
+    },
+    {
+      "id": "T-20260428-502",
+      "title": "[站点探查] fetch 详情页，分析字段 DOM 结构",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §2",
+      "dependency": ["T-20260428-501"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "详情页 metadata 位于 table.xxgk_detail_table1，正文位于 div#Zoom，相关文档可提供 interpret_links。"
+    },
+    {
+      "id": "T-20260428-503",
+      "title": "[实现] adapter: most.py (build_list_url/parse_list/parse_detail)",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §2",
+      "dependency": ["T-20260428-501", "T-20260428-502"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "修复初版 metadata 表格越界；收紧 detail_url_pattern；抽取 title/body/source_metadata/attachments/interpret_links。"
+    },
+    {
+      "id": "T-20260428-504",
+      "title": "[实现] seed: most.yaml (含 scope_mode: same_origin)",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §3",
+      "dependency": ["T-20260428-503"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "politeness_rps=0.3，max_pages_per_run=3，crawl_mode=full。"
+    },
+    {
+      "id": "T-20260428-505",
+      "title": "[实现] golden: ≥5 组 HTML + .golden.json",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §3",
+      "dependency": ["T-20260428-503"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "已存 1 个列表页 + 5 个详情页，共 6 个 HTML 和 6 个 .golden.json。"
+    },
+    {
+      "id": "T-20260428-506",
+      "title": "[实现] test: test_adapter_most.py",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-output-contract.md §3",
+      "dependency": ["T-20260428-505"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "MOST 专项测试 10/10 通过，覆盖 registry、列表过滤、详情字段和 minimal HTML。"
+    },
+    {
+      "id": "T-20260428-507",
+      "title": "[Live smoke] run_crawl_task.py --max-pages 30",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-pipeline.md §4.5",
+      "dependency": ["T-20260428-504"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "task_id=2026042841；raw_records_written=14；errors=0；anti_bot_events=0。"
+    },
+    {
+      "id": "T-20260428-508",
+      "title": "[Audit] audit_crawl_quality.py (title_rate ≥ 0.95, body_500_rate ≥ 0.70, metadata_rate ≥ 0.30)",
+      "status": "completed",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-pipeline.md §4.5",
+      "dependency": ["T-20260428-507"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "title_rate=100%，body_500_rate=85.7%，metadata_rate=100%，VERDICT PASS。"
+    },
+    {
+      "id": "T-20260428-509",
+      "title": "[写 eval] codegen-most-20260428.md",
+      "status": "verifying",
+      "plan_id": "plan-20260428-codegen-most",
+      "spec_ref": "codegen-pipeline.md §4.6",
+      "dependency": ["T-20260428-508"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T15:45:00Z",
+      "notes": "eval 已写入 green 证据；PR 创建后可关闭任务线。"
+    }
+  ]
+}
