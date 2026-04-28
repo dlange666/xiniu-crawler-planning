@@ -5,7 +5,7 @@ Read this file before starting work. It is the repository control map.
 本文件只描述四件事：**仓库地图（Repository Map）**、**角色（Roles）**、
 **工作流（Operating Flows）**、**硬规则（Hard Rules）**。任何业务/产品
 相关的表述（采集对象、字段定义、产品形态）都不写在此处，统一沉淀在
-`docs/prod-spec/<domain>-<vN>.md` 与对应 `domains/<context>/` 下。
+`docs/prod-spec/<domain>.md` 与对应 `domains/<context>/` 下。
 
 ## Repository Map
 
@@ -13,6 +13,7 @@ Read this file before starting work. It is the repository control map.
 |---|---|
 | `CLAUDE.md`, `AGENTS.md`, `README.md` | 根控制文档与人类入口 |
 | `docs/architecture.md`, `docs/product-sense.md` | 架构、产品方向（不含具体业务字段） |
+| `docs/domains-overview.md`, `docs/gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
 | `docs/exec-plan/`, `docs/task/`, `docs/experiment/`, `docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、实验执行、清理记录 |
 | `docs/eval-test/` | 评估证据与回放产物 |
 | `docs/prod-spec/`, `docs/research/` | 长期参考文档：产品规格与研究底稿（业务细节归此） |
@@ -82,6 +83,20 @@ Read this file before starting work. It is the repository control map.
 - 业务代码留在正确 bounded context（`domains/<context>/`）；`infra/` 只放共享技术能力。
 - 命名要承载具体职责。避免 `common.py`、`utils.py`、`helper.py` 等空名。
 - `scripts/` 不得相互 import；可复用的原语沉到 `infra/<surface>/` 或正确的 domain 模块。
+
+### Data Model Authoritative Source
+- 所有表 DDL 的**唯一权威源**是 `docs/prod-spec/data-model.md`。
+- 其它 spec（如 `codegen-output-contract.md` / `infra-deployment.md`）描述设计动机与字段语义，**不再维护表 DDL**；如需 SQL 定义，引用 data-model.md 对应小节。
+- 新增表必须先在 owning spec 写设计动机，再到 data-model.md 落 DDL；两个 spec 的修订历史互相引用。
+- 尽量不使用 JSON 字段。仅在动态结构 / 一次性写入 / 不参与 SQL 检索三类场景才允许（详见 data-model.md §1.3）。
+
+### Spec Versioning
+- spec 文件名**不带版本号**（用 `infra-fetch-policy.md` 而非 `infra-fetch-policy-v1.md`）。
+- 每份 spec 顶部有引用块 frontmatter：`> **版本**：rev N · **最近修订**：YYYY-MM-DD · **状态**：active|draft|deprecated`。
+- 每份 spec 底部有 `## 修订历史` 表（rev / 日期 / 摘要 / 关联 PR）。
+- 任何 spec 的**实质性改动**（影响实现 / 契约 / 默认值 / 接口）必须同 PR 内：(a) 追加 `## 修订历史` 一行；(b) bump 顶部 rev 号与 `最近修订` 日期。breaking change 在摘要前加 **[breaking]** 前缀。
+- 纯排版、链接修复、错别字不算实质性改动，可不更修订历史。
+- 模板：`docs/prod-spec/template.md`。其它 docs 子目录模板：`docs/{exec-plan,task,experiment,eval-test}/template.md`。
 
 ### Docs, Data, and Runtime
 - `docs/` 只放文档。新 Markdown 文件用 kebab-case 命名。

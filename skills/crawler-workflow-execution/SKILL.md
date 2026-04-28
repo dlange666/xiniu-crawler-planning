@@ -47,6 +47,16 @@ description: 当任务属于 xiniu-crawler 仓库主交付环路时使用。本 
 - 运行时日志、CSV、生成的报告、本地数据库都不进 `docs/`。
 - 运行时产物不入 git。
 
+### Spec 与模板纪律
+
+- 任何 `docs/prod-spec/*.md` 实质性改动必须同 PR 追加 `## 修订历史` 并 bump frontmatter rev/日期（详见入口 skill `crawler-workflow` 的"Spec 编辑前置检查"）。
+- 新建 docs 文档必须从对应模板起手：
+  - `docs/exec-plan/template.md`
+  - `docs/task/template.md`
+  - `docs/experiment/template.md`
+  - `docs/prod-spec/template.md`
+  - `docs/eval-test/template.md`
+
 ## 完成标准
 
 不要停在"代码改完"就收尾，按当前角色走完环路：

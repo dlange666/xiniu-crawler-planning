@@ -1,4 +1,6 @@
-# 政策图谱 v1 产品规格
+# 政策图谱 · 产品规格
+> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
+
 
 > 本文件是爬虫仓库视角的**业务规格**。完整产品策划请见
 > `docs/research/policy-graph-product-plan-20260427.md`。本文件只描述爬虫
@@ -104,7 +106,7 @@
 2. 由于其他部门会**转载**国务院文件，需保留"极其相似但有变更"的版本；**仅去重内容百分百一致**的副本。
 3. 去重在解析层做（`policy_title + pub_code + content_sha256` 联合键严格匹配）；source 层不做去重。
 4. PDF 附件本期仅原始落盘，不入文本（TD-001）。
-5. 全程遵守 `AGENTS.md` 中的爬虫硬规则（不绕过保护、robots、Retry-After、原始页留存等）。
+5. 全程遵守 `AGENTS.md` 爬虫硬规则与 `docs/prod-spec/infra-fetch-policy.md`（限流、重试、反爬识别与降级的完整契约）。本业务域对默认参数的合法覆盖渠道见该 spec §9。
 
 ## 7. 成功标准（爬虫侧）
 
@@ -124,23 +126,27 @@
 
 | 子模块 | 路径 | 职责 |
 |---|---|---|
-| `model` | `domains/gov_policy/model/` | 领域实体与规则：`Task`、`UrlRecord`、`FetchRecord`、`PolicyParsed`、`PolicyDocJSON`、`Attachment`、`SourceMetadata` |
-| `crawl` | `domains/gov_policy/crawl/` | seed 加载、调用 `infra/frontier` 派发、调用 `infra/http` 抓取、原始字节交 `sink` |
+| `model` | `domains/gov_policy/model/` | 领域实体：`UrlRecord`、`FetchRecord`、`PolicyParsed`、`PolicyDocJSON`、`Attachment`、`SourceMetadata` |
+| `crawl` | `domains/gov_policy/crawl/` | 通用采集编排：seed 加载、调用 `infra/frontier` 派发、调用 `infra/http` 抓取 |
 | `render` | `domains/gov_policy/render/` | headless 渲染编排（M5 启用，MVP 占位） |
-| `parse` | `domains/gov_policy/parse/` | 站点适配器、元数据/正文/附件三段分离、链接抽取 |
+| `parse` | `domains/gov_policy/parse/` | 通用解析流程：调度对应 `adapters/<host>` 的 hook |
+| `adapters` | `domains/gov_policy/adapters/<host>.py` | 站点适配器（每 host 一文件）：URL 模式、DOM 选择器、解析 hook。MVP 手写，M3.5 起由 codegen 产出 |
+| `golden` | `domains/gov_policy/golden/<host>/` | 黄金用例：固定快照 + 期望 JSON，供 harness 跑单元校验 |
+| `seeds` | `domains/gov_policy/seeds/<host>.yaml` | 数据源入口 URL、抓取频率、礼貌性参数 |
 | `dedup` | `domains/gov_policy/dedup/` | 联合键 `(policy_title_norm, pub_code, content_sha256)` 严格去重 + simhash 信号 |
-| `extract` | `domains/gov_policy/extract/` | 36 字段 prompt + JSON schema + 调 `infra/ai` |
+| `extract` | `domains/gov_policy/extract/{prompts,schemas}/` | 36 字段 prompt + JSON schema |
 | `sink` | `domains/gov_policy/sink/` | 通过 `infra/storage` 写元数据 + 原始档 |
-| `seeds` | `domains/gov_policy/seeds/` | 数据源 YAML 清单 |
+| `harness_rules.py` | `domains/gov_policy/harness_rules.py` | 注入 `infra/harness` 的业务侧规则（命中率门槛、禁词补充等） |
 
 子模块依赖方向：
 
 ```
-crawl   → infra/{frontier,http,robots,storage} · model · sink
-parse   → model · dedup · sink
-dedup   → model
-extract → infra/ai · model · sink
-sink    → infra/storage · model
+crawl    → infra/{frontier,http,robots,storage} · model · adapters · sink
+parse    → adapters · model · dedup · sink
+adapters → model（纯函数 hook，不持有 infra）
+dedup    → model
+extract  → infra/ai · model · sink
+sink     → infra/storage · model
 ```
 
 ## 9. 不在 v1 范围
@@ -150,3 +156,9 @@ sink    → infra/storage · model
 - simhash 相似政策自动合并（TD-003）
 - 跨境/海外站点
 - 多租户、订阅推送、删除链路平台化能力（推迟到平台化阶段）
+
+## 修订历史
+
+| 修订 | 日期 | 摘要 | 关联 |
+|---|---|---|---|
+| rev 1 | 2026-04-28 | 初稿 | — |
