@@ -1,0 +1,165 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "MVP 阶段：跑通国家发改委（NDRC）单源端到端采集链路；T-101..T-109 完成，T-110/111/112/113/114 留作后续阶段。",
+  "pr_name": "mvp-bootstrap",
+  "branch": "agent/feature-20260428-mvp-bootstrap",
+  "date": "2026-04-28",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260427-101",
+      "title": "[project] 初始化 Python + uv 工程",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "—",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:10:00Z",
+      "notes": "pyproject.toml 锚定 Python 3.12；dev deps: pytest 9.0.3 + pytest-asyncio 1.3.0 + ruff 0.15.12；后续追加 httpx/bs4/lxml/pyyaml；uv sync 通过；ruff check 通过。"
+    },
+    {
+      "id": "T-20260427-102",
+      "title": "[infra/storage] 抽象层（dev SQLite + prod PolarDB + OSS）",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "data-model.md §6",
+      "dependency": ["T-20260427-101"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:14:00Z",
+      "notes": "MetadataStore + BlobStore Protocol；SqliteMetadataStore（4 张 MVP 表：url_record/fetch_record/crawl_raw/crawl_run_log）；LocalFsBlobStore；STORAGE_PROFILE 切换；prod 暂 NotImplementedError；8/8 测试通过。"
+    },
+    {
+      "id": "T-20260427-103",
+      "title": "[infra/http] 基础 HTTP 客户端",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "infra-fetch-policy.md §2.1, §3, §5",
+      "dependency": ["T-20260427-101"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "HttpClient（真实身份 UA + Retry-After 优先 + 指数退避 + 抖动）；HostTokenBucket（per-host RPS + cooldown + burst 起步装满）；detect_anti_bot（401/403/WAF cookie/标题/captcha 识别；429 走重试）；新增 skip_anti_bot 参数供 robots fetch 豁免；6/6 测试通过。"
+    },
+    {
+      "id": "T-20260427-104",
+      "title": "[infra/robots] RFC 9309 实现",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "infra-fetch-policy.md §4",
+      "dependency": ["T-20260427-103"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:14:00Z",
+      "notes": "RobotsChecker（http_get 注入避免循环依赖）；24h 缓存；4xx → allow all；5xx/网络错 → complete disallow；6/6 测试通过。"
+    },
+    {
+      "id": "T-20260427-105",
+      "title": "[infra/frontier] 单进程两级队列",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "infra-fetch-policy.md §2.1, §2.2",
+      "dependency": ["T-20260427-101"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:14:00Z",
+      "notes": "全局优先级堆 + per-host ready queue；host 公平性轮转；max_pages 任务预算；同 url_fp 去重；5/5 测试通过。"
+    },
+    {
+      "id": "T-20260427-106",
+      "title": "[domains/gov_policy/{model,crawl}] 任务模型与 seed 管理",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "data-model.md §4.2.1, domain-gov-policy.md §8",
+      "dependency": ["T-20260427-102", "T-20260427-103", "T-20260427-104", "T-20260427-105"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "model/records.py 7 个 dataclass；seeds/__init__.py YAML loader；crawl/runner.py 主循环 seed→list→detail→sink；scripts/run_crawl_task.py CLI。"
+    },
+    {
+      "id": "T-20260427-107",
+      "title": "[domains/gov_policy/{crawl,adapters}] 国家发改委文件库适配器",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "codegen-output-contract.md §2",
+      "dependency": ["T-20260427-106"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "原 plan 指国务院文件库（www.gov.cn），实测对 honest crawler UA 直接 403——按硬规则不绕过，改用同 plan 内的发改委（www.ndrc.gov.cn 200 OK）。adapters/ndrc.py：ADAPTER_META + 3 hooks；列表页正则 t<YYYYMMDD>_<id>.html；详情页 div.article 取正文 + 元数据 label 抽取。"
+    },
+    {
+      "id": "T-20260427-108",
+      "title": "[domains/gov_policy/{parse,golden}] 解析框架 + NDRC 黄金用例",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "codegen-output-contract.md §2.2, §3",
+      "dependency": ["T-20260427-107"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "parse/orchestrator.py per-host 路由；golden/ndrc/{list_page,detail_sample}.html 真实抓取的 2 份快照（spec §3 要求 ≥5，MVP 期手写阶段先 2 份；codegen 平台启用后由 agent 补足到 5）；6/6 测试通过。"
+    },
+    {
+      "id": "T-20260427-109",
+      "title": "[domains/gov_policy/dedup] 解析层严格去重",
+      "status": "completed",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "data-model.md §4.2.3 (content_sha256), architecture.md §5",
+      "dependency": ["T-20260427-108"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "联合键 (policy_title_norm, pub_code, content_sha256) 严格匹配；title 规范化去标点+合并空白；同 pub_code 同正文 → 重复，同 pub_code 改正文 → 保留；5/5 测试通过。simhash64 信号写入暂缓（TD-003）。"
+    },
+    {
+      "id": "T-20260427-110",
+      "title": "[domains/gov_policy/adapters] 8 个国务院部委适配器",
+      "status": "pending",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "codegen-output-contract.md §2",
+      "dependency": ["T-20260427-109"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "MVP'采集一个源网站'范围已达成（NDRC）；本任务保留为后续启动；M3.5 codegen 平台启用后由 agent 自动产出。"
+    },
+    {
+      "id": "T-20260427-111",
+      "title": "[infra/ai] LLM 客户端与 prompt 框架",
+      "status": "pending",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "codegen-output-contract.md §6",
+      "dependency": ["T-20260427-101"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "暂缓——'实现 MVP 采集一个源网站'未要求 AI 抽取。"
+    },
+    {
+      "id": "T-20260427-112",
+      "title": "[domains/gov_policy/{extract,sink}] 抽取流水线",
+      "status": "pending",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "domain-gov-policy.md §5, codegen-output-contract.md §4",
+      "dependency": ["T-20260427-111"],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "暂缓——AI 抽取阶段。当前 crawl_raw 已包含 parse_detail 输出（title/body/source_metadata），AI 抽取后续接入。"
+    },
+    {
+      "id": "T-20260427-113",
+      "title": "[domains/gov_policy/harness_rules] 业务侧 harness 规则占位",
+      "status": "pending",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "codegen-output-contract.md §5",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "暂缓——M3.5 codegen-bootstrap 阶段一并实装。"
+    },
+    {
+      "id": "T-20260427-114",
+      "title": "[docs/eval-test] M3 验收报告",
+      "status": "pending",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
+      "spec_ref": "—",
+      "dependency": ["T-20260427-112"],
+      "assignee": "evaluator",
+      "last_updated": "2026-04-28T12:33:00Z",
+      "notes": "暂缓——AI 抽取（T-112）完成后再做。MVP 采集环节验收见 docs/eval-test/mvp-ndrc-collection-20260428.md。"
+    }
+  ]
+}

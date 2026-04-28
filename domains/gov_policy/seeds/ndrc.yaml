@@ -1,0 +1,11 @@
+# NDRC (国家发改委) 数据源种子
+# spec: docs/prod-spec/domain-gov-policy.md §8 + codegen-output-contract.md §3
+
+host: www.ndrc.gov.cn
+business_context: gov_policy
+data_kind: policy
+politeness_rps: 0.3       # 仅向下覆盖默认 0.5（更保守）
+max_pages_per_run: 3     # MVP：抓首页前 20 条详情
+crawl_mode: full
+entry_urls:
+  - https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/   # 发展改革委令

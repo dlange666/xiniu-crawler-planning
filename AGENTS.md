@@ -56,7 +56,8 @@ Read this file before starting work. It is the repository control map.
 
 ### Delivery Controls
 - `Generator` 一次只做一个已批准的原子任务。
-- 任务 ID 按日期编号。`101+` 用于活跃任务，`201+` 用于新计划切片；同一日期同一分支/PR 线保持在同一百位段；并行线另开新百位段。
+- 任务 ID 格式：**`T-YYYYMMDD-NNN`**（年月日 + 三位顺序号）。**任何文档、commit message、PR 描述、对话引用都必须用完整形式，禁止简写为 `T-NNN`**。
+- 任务 ID 百位段编号：`101+` 用于活跃任务，`201+` 用于同日新计划切片，`301+` 用于第二条新切片，依次类推；同一日期同一分支/PR 线保持在同一百位段；并行线另开新百位段。
 - 如果某文件改动型任务处于 `in_progress`，必须先创建并切换到对应分支再编辑文件。
 - 并行非 `main` 会话使用专用 worktree：`git worktree add /Users/wangjisong/xiniu/code/xiniu-crawler-<topic> <branch>`，合并后 `git fetch --prune && git worktree prune` 或 `git worktree remove <path>`。
 - 默认粒度：`one branch -> one active task -> one draft PR`。多任务共享分支仅当属于同一已批准切片。
