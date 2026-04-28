@@ -1,19 +1,36 @@
-# plan-20260428-observability-bootstrap
+# 暂缓计划（Deferred Plans）
 
-## 1. 元信息
+收录"已完成详细设计但暂不实施"的 plan。每个 plan 一个二级章节；何时启用
+由 `Planner` 显式决定。
+
+## 与 `tech-debt-tracker.md` 的区别
+
+| 文档 | 内容粒度 | 何时用 |
+|---|---|---|
+| `tech-debt-tracker.md` | 1 行登记（标题 + 风险 + 状态） | 还没做完整设计的债务 |
+| 本文件章节 | 完整 plan（任务列表 + 验收 + 边界） | **设计已经做完**但用户决定暂不实施 |
+
+提升流程：本文件中某节内容整体提升 → 复制到 `active/plan-<date>-<slug>.md`
+→ 本文件该节删除 + cleanup-log 记录 + tech-debt 对应 TD 升级。
+
+---
+
+## plan-20260428-observability-bootstrap
+
+### 元信息
 
 - **Plan ID**：`plan-20260428-observability-bootstrap`
 - **关联规格**：`docs/prod-spec/infra-observability.md`（零自建后台版）、`docs/prod-spec/infra-resilience.md`
 - **状态**：`deferred`（不进入 MVP；MVP 跑稳后由 Planner 决定何时提升）。登记 TD-013
 - **里程碑**：M-Observability（≈1.5 周）
 
-## 2. 目标
+### 目标
 
 交付**零自建后台服务**的最小可观测性：所有指标存到与业务同一个 DB，
 告警靠 cron + SQL + IM webhook，无 Prometheus / Alertmanager / Grafana。
 后续公司基础设施就位（TD-005），仅替换 `recorder.py` 一个文件即可升级。
 
-## 3. 原子任务列表
+### 原子任务列表
 
 | 任务 ID | 标题 | 实现细节 | 验证方式 | 状态 |
 |---|---|---|---|---|
@@ -23,7 +40,7 @@
 | T-20260428-304 | [scripts] 告警脚本 + IM webhook | `scripts/observe_check.py`：按 `infra-observability.md` §7 跑 8 条告警 SQL；命中即 POST 到 `OBSERVE_WEBHOOK_URL`（钉钉/飞书/企微）；payload 格式见 §7；外部 cron 每 5min 触发 | 单元测试：注入超阈值数据 → webhook 收到正确 payload；空数据不触发；webhook 故障不影响主流程 | `pending` |
 | T-20260428-305 | [docs/eval-test] M-Observability 验收 | 用一个跑 24h 的小流量任务作为基线；查询 metric_snapshot 与告警历史；写入 `docs/eval-test/` 报告 | 工件含 18 个指标的真实数值 + 至少一次告警 webhook 投递记录 | `pending` |
 
-## 4. 边界护栏
+### 边界护栏
 
 - **不部署** Prometheus / VictoriaMetrics / Alertmanager / Grafana / Loki。
 - **不暴露** `/metrics` HTTP endpoint（升级时再加）。
@@ -31,7 +48,7 @@
 - **不绕过** LiteLLM 后台预算；提权走 LiteLLM 后台。
 - **不让** webhook 故障影响止损：所有自动止损动作（暂停 host、disable adapter）由进程内 frontier/anti-bot 直接触发，与 webhook 链路解耦。
 
-## 5. 完成标准
+### 完成标准（提升后启用）
 
 `green` 仅当：
 
@@ -39,9 +56,8 @@
 - T-305 工件展示 18 个指标在 24h 真实样本下有数值
 - LiteLLM 后台已配置至少一个 `business_context` 的月度预算
 - 至少一次告警 webhook 端到端跑通（钉钉/飞书/企微任一）
-- 本文件移到 `docs/exec-plan/archive/YYYY-Www/`
 
-## 6. 后续升级路径（不在本 plan 内）
+### 后续升级路径（不在本 plan 内）
 
 公司有 Prometheus 拉取端后：
 

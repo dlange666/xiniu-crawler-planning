@@ -3,7 +3,7 @@
 
 
 > **实施状态**：本 spec 是已通过的设计契约。MVP plan 暂不实现（TD-013，plan
-> 移至 `docs/exec-plan/deferred/`），但 spec 永远是后续编码的权威。
+> 移至 `docs/exec-plan/deferred-plan.md`），但 spec 永远是后续编码的权威。
 >
 > **背景**：当前没有公司级 Prometheus / VictoriaMetrics / 云 Prometheus
 > 拉取端。本 spec 给出**完全不引入新基础设施**的最小可观测方案：

@@ -16,7 +16,7 @@
 | TD-010 | infra 韧性：增量抓取（ETag/304）+ checkpoint + DLQ + 补偿队列 | P1 review | 2026-04-28 | 中 | 已 spec 设计于 `infra-resilience.md`；MVP 跑稳后立项；原 T-115/116/117 |
 | TD-011 | 鲁棒性 fixture 集（research §6 7 个非渲染场景） | P5 review | 2026-04-28 | 中 | 已设计；原 T-118；与 TD-010 一并提升 |
 | TD-012 | 站点版本巡检（`infra/version_guard`） | P1 review | 2026-04-28 | 中 | 已 spec 设计于 `infra-resilience.md` §3；codegen 平台稳定后立项；原 T-211 |
-| TD-013 | 可观测性零自建版（recorder + metric_snapshot + cron 告警 + LiteLLM 成本） | P3/P4/P8 | 2026-04-28 | 中 | 已 spec 与 plan 设计；plan 在 `docs/exec-plan/deferred/`；MVP 跑稳后立项 |
+| TD-013 | 可观测性零自建版（recorder + metric_snapshot + cron 告警 + LiteLLM 成本） | P3/P4/P8 | 2026-04-28 | 中 | 已 spec 与 plan 设计；plan 在 `docs/exec-plan/deferred-plan.md`；MVP 跑稳后立项 |
 | TD-014 | 可视化自建看板（FastAPI + Jinja2 + Chart.js） | 用户决策 | 2026-04-28 | 中 | 已 spec 设计于 `infra-visualization.md`；与 TD-013 一并提升或晚一步 |
 | TD-015 | 主从分布部署 + 自建分发（`infra/dispatch/`，不用 Airflow/Celery） | 用户决策 | 2026-04-28 | 中 | 已 spec 设计于 `infra-deployment.md`；MVP 单进程跑稳后或扩展期（≥ M4）立项 |
 | TD-016 | 多 agent 交叉验证（L4，跳过人审增强） | auto-merge-policy review | 2026-04-28 | 中 | spec §8 标注；先用 L1+L3+L6+L8 跑数据，按 false-positive 比例决定是否引入 |

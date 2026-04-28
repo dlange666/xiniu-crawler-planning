@@ -12,7 +12,7 @@
 | MVP | M1 单源跑通 | 2 周 | 国务院文件库静态抓取 + 元数据/正文/附件分离 + 原始页可回放 | 100 条全量字节落盘 |
 | MVP | M2 多源 + 解析层去重 | 3 周 | 8 个国务院部委 + 严格去重 | 转载政策只留 1 条；改动版均保留 |
 | MVP | M3 AI 结构化 | 3 周 | 36 字段 prompt → JSON 校验 → 入库 | schema 合格率 ≥ 90%、关键 6 字段准确率 ≥ 95% |
-| ~~平台~~ | ~~M-Observability~~ | ~~1.5 周~~ | **暂缓**（plan 移至 `docs/exec-plan/deferred/`，TD-013） | — |
+| ~~平台~~ | ~~M-Observability~~ | ~~1.5 周~~ | **暂缓**（plan 移至 `docs/exec-plan/deferred-plan.md`，TD-013） | — |
 | 平台 | M3.5 Codegen Bootstrap | 3 周 | `infra/{agent,sandbox,harness,codegen,adapter_registry,scheduler}` + 端到端复刻部委验收（**不含**版本巡检 `version_guard`，TD-012） | OpenCode 自动产出 1 个适配器并通过 harness、人审、合并 |
 | 扩展 | M4 地方政府全覆盖 | 4 周 | 31 省市"信息公开 + 要闻 + 政策解读"三入口；M4 起新适配器**优先由 codegen 产出** | 数据源数 ≥ 105；任务级 SLA；codegen 产出占比 ≥ 70% |
 | 扩展 | M5 调度 + 反爬 + 渲染 | 4 周 | 两级队列扩多 worker + 429/503 处理 + headless 渲染池（按需） | 反爬命中场景不失控 |
