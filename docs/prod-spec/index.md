@@ -23,6 +23,7 @@
 | `domain-gov-policy.md` | 政府产业政策业务规格（采集范围 / 6 类数据 / 36 字段 / 验收） | MVP 实施 |
 | **Infra · 采集运行时** | | |
 | `infra-fetch-policy.md` | 限流 / 重试 / robots / 反爬识别 / 紧急止损 / warm-up | MVP 必须实现 |
+| `infra-render-pool.md` | Headless 渲染池：render decision / queue / Playwright pool / 回压 / 合规禁区 | M5 暂缓（TD-008） |
 | `infra-resilience.md` | 增量抓取 / checkpoint / 异常分级 / 心跳 / 版本巡检 | MVP 暂缓（TD-010~012） |
 | **Infra · 部署与协调** | | |
 | `infra-deployment.md` | 主从分布 / 自建分发 / SKIP LOCKED / master lease | MVP 单进程；扩展期升级（TD-015） |
@@ -45,9 +46,14 @@ codegen-output-contract ─→ codegen-auto-merge（tier 与 canary 触发条件
                          ├→ data-model（crawl_raw 等）
                          └→ infra-crawl-engine（adapter 协议被引擎调度）
 
-infra-crawl-engine ──→ infra-{fetch-policy,resilience}（HTTP / robots / 增量）
+infra-crawl-engine ──→ infra-{fetch-policy,render-pool,resilience}（HTTP / robots / 渲染 / 增量）
                     ├→ data-model（url_record / fetch_record / crawl_raw）
                     └→ codegen-output-contract（消费 ParseListResult / ParseDetailResult）
+
+infra-render-pool ──→ infra-fetch-policy（robots / anti-bot / cooldown）
+                   ├→ infra-observability（render backlog / success / crash 指标）
+                   ├→ data-model（fetch_record.rendered / crawl_raw.raw_blob_uri）
+                   └→ codegen-output-contract（render_mode / should_render）
 
 codegen-auto-merge ──→ infra-fetch-policy（warm-up 联动）
                     └→ infra-observability（审计 webhook 通道）

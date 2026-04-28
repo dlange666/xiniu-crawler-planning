@@ -38,16 +38,18 @@ docs/exec-plan/
 | `roadmap-policy-crawler.md` | 路线图 | M0–M8 全周期 | 全局 |
 | `plan-20260427-mvp-policy-crawler.md` | MVP 计划 | active | M0–M3，14 个原子任务 |
 | `plan-20260428-codegen-bootstrap.md` | 代码生成平台 | active | M3.5，16 个原子任务 |
+| `plan-20260428-webui-bootstrap.md` | WebUI MVP | active | T-20260428-301/T-20260428-302，任务后台 + 监控 + 结果浏览 |
 
 ## 暂缓 plan（`deferred-plan.md`）
 
 | 章节 | 暂缓原因 | 提升触发 |
 |---|---|---|
 | `plan-20260428-observability-bootstrap` | TD-013：MVP 阶段无可观测性需求 | MVP 跑稳后 |
+| `plan-20260428-render-pool-bootstrap` | TD-008：MVP/M3.5 不接 JS 渲染站；headless 必须先有合规池化设计 | M5 或真实数据源出现稳定 JS shell / render backlog |
 
 ## tech-debt-tracker.md
 
-非紧急债务在此登记，必须由 `Planner` 显式提升后才进入活跃。详见文件本身（TD-001..017）。
+非紧急债务在此登记，必须由 `Planner` 显式提升后才进入活跃。详见文件本身（TD-001..018）。
 
 ## 何时进入 archive/
 
