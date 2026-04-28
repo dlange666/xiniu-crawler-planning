@@ -267,29 +267,29 @@ body,
   overflow-wrap: anywhere;
 }
 
-.attachment-list {
-  width: 100%;
-}
-
-.attachment-list-item {
-  padding-block: 5px;
-}
-
-.attachment-list-item + .attachment-list-item {
+.child-link-row {
+  padding-top: 4px;
   border-top: 1px solid #eef0f5;
 }
 
+.child-link-label .ant-tag {
+  margin-inline-end: 0;
+}
+
 .child-link-text {
+  width: 100%;
   min-width: 0;
 }
 
-.child-link-text .ant-typography {
+.child-link-title,
+.child-url {
+  display: inline-block;
   max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .child-url {
-  display: inline-block;
-  overflow-wrap: anywhere;
+  color: #7a8497;
 }
 
 .metadata-grid {
