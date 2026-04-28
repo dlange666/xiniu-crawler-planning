@@ -15,7 +15,7 @@
 | ~~平台~~ | ~~M-Observability~~ | ~~1.5 周~~ | **暂缓**（plan 移至 `docs/exec-plan/deferred-plan.md`，TD-013） | — |
 | 平台 | M3.5 Codegen Bootstrap | 3 周 | `infra/{agent,sandbox,harness,codegen,adapter_registry,scheduler}` + 端到端复刻部委验收（**不含**版本巡检 `version_guard`，TD-012） | OpenCode 自动产出 1 个适配器并通过 harness、人审、合并 |
 | 扩展 | M4 地方政府全覆盖 | 4 周 | 31 省市"信息公开 + 要闻 + 政策解读"三入口；M4 起新适配器**优先由 codegen 产出** | 数据源数 ≥ 105；任务级 SLA；codegen 产出占比 ≥ 70% |
-| 扩展 | M5 调度 + 反爬 + 渲染 | 4 周 | 两级队列扩多 worker + 429/503 处理 + headless 渲染池（按需） | 反爬命中场景不失控 |
+| 扩展 | M5 调度 + 反爬 + 渲染 | 4 周 | 两级队列扩多 worker + 429/503 处理 + headless 渲染池（按需，见 `infra-render-pool.md`） | 反爬命中场景不失控；JS shell 站点可按需渲染 |
 | 优化 | M6 可观测性 | 3 周 | OTel + Grafana + Alertmanager + 回放工具 | 任务/调度/AI 主面板齐备 |
 | 平台化 | M7 检索 + 多租户 + 配额 | 4 周 | ES 检索、租户隔离、审计 | 第二个业务方可接入 |
 | 平台化 | M8 成本治理 + 模型灰度 + 删除链路 | 4 周 | 模型可灰度、删除工单闭环、成本可归因 | 满足合规与持续降本 |
@@ -26,6 +26,6 @@
 - M2 → M3：解析合格率 ≥ 95%、跨部委转载去重生效
 - M3 → M3.5：MVP plan 全部 green；至少 9 个手写适配器（国务院 + 8 部委）已合并，作为 codegen few-shot 模板
 - M3.5 → M4：codegen 端到端复刻部委验收 green；外部 task 项目接口已对齐
-- M4 → M5：105+ 入口活跃；出现 host 维度 429/5xx 显著上升
+- M4 → M5：105+ 入口活跃；出现 host 维度 429/5xx 显著上升；或真实数据源出现稳定 JS shell / 无限滚动导致 static/API 覆盖不足
 - M5 → M6：渲染池稳定运行 ≥ 2 周；7 天 P95 时延 < 24h
 - M6 → 平台化：观测口径满足生产，外部业务方提出接入

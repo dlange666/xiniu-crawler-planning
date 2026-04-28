@@ -1,6 +1,6 @@
 # Infra 通用爬虫引擎
 
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
 > **实施状态**：MVP 已实现核心（commit 1987ac8）；高级特性（host_score 外层 / aging / AI relevance）随阶段演进。
 
 > 适用：`infra/crawl/` 模块。本 spec 规定通用爬虫引擎的对外契约——
@@ -209,6 +209,7 @@ def parse_list(html, url):
 | Adapter 接口约定 | `codegen-output-contract.md` §2 |
 | 调度策略来源（BFS/DFS） | `research/research-ai-first-crawler-system-20260427.md` §3-§4 |
 | 限流与反爬底层 | `infra-fetch-policy.md` |
+| Headless 渲染池 | `infra-render-pool.md` |
 | 增量抓取（HTTP 304） | `infra-resilience.md` §1 |
 | Checkpoint 与续抓 | `infra-resilience.md` §2 |
 | 数据落地 schema | `data-model.md` §4.2.1（url_record）、§4.2.2（fetch_record）、§4.2.3（crawl_raw） |
@@ -220,7 +221,7 @@ def parse_list(html, url):
 - **多 host host_score 外层调度**：单 host 任务退化为 round-robin；多 host 任务会出现时（M3.5 多 task 并行）实现
 - **AI 辅助 priority_score**：等 M3 infra/ai 接入后做（research §3 7 因子完整公式）
 - **aging_bonus 防饥饿**：单 host MVP 用不上；多 host 时由 frontier 在出队时计算
-- **headless 渲染 / 滚动 / 加载更多**：M5 渲染池（TD-008）
+- **headless 渲染 / 滚动 / 加载更多**：M5 渲染池（TD-008，见 `infra-render-pool.md`）
 - **AI 链接发现**：M3.5+ codegen 平台
 - **Sitemap 解析**：可作为 helper 加入（`parse_sitemap`）；当前 NDRC 不需要
 
@@ -234,4 +235,5 @@ def parse_list(html, url):
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 2 | 2026-04-28 | 补充 headless render pool 的 spec 归属；CrawlEngine v1 仍不实现渲染，只把 M5 能力边界指向 `infra-render-pool.md` | TD-008 / `infra-render-pool.md` |
 | rev 1 | 2026-04-28 | 初稿 —— CrawlEngine 契约 + BFS/DFS routing order + 4 scope mode + 递归发现 + 翻页 helper（cph/url_param/path）。落实 research §3-§4 与 commit 1987ac8 的引擎重构 | 替代 design-task-driven-codegen §6 的 worker 循环描述；外延 codegen-output-contract.md §2 |

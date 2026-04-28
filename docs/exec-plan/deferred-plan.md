@@ -53,7 +53,7 @@
 `green` 仅当：
 
 - 第 3 节 5 个任务全部 `completed`
-- T-305 工件展示 18 个指标在 24h 真实样本下有数值
+- T-20260428-305 工件展示 18 个指标在 24h 真实样本下有数值
 - LiteLLM 后台已配置至少一个 `business_context` 的月度预算
 - 至少一次告警 webhook 端到端跑通（钉钉/飞书/企微任一）
 
@@ -67,3 +67,50 @@
 4. `metric_snapshot` 表保留 90d 后退役
 
 升级期间业务代码完全不动。
+
+---
+
+## plan-20260428-render-pool-bootstrap
+
+### 元信息
+
+- **Plan ID**：`plan-20260428-render-pool-bootstrap`
+- **关联规格**：`docs/prod-spec/infra-render-pool.md`、`docs/prod-spec/infra-crawl-engine.md`、`docs/prod-spec/infra-fetch-policy.md`
+- **状态**：`deferred`（M5；登记 TD-008）
+- **里程碑**：M5 调度 + 反爬 + 渲染（≈2 周，嵌入 M5 总计划）
+
+### 目标
+
+交付单进程、保守默认值的 headless render pool，让 JS 渲染站点在不绕过保护
+措施的前提下可采、可限流、可回放、可观测。它只作为 static/API/SSR 之后的
+末档 fallback，不进入所有请求主路径。
+
+### 原子任务列表
+
+| 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式 | 状态 |
+|---|---|---|---|---|---|
+| T-20260428-401 | [infra/render] 类型与 render decision gate | `infra-render-pool.md` §3, §4 | 新建 `infra/render/{types,decision,config}.py`；实现 `RenderRequest` / `RenderResult` / `RenderDecision`；覆盖允许矩阵和禁止矩阵；默认 `RENDER_POOL_ENABLED=false` | 单元测试：JS shell 允许；API 可用不渲染；robots/login/captcha/challenge/paywall 禁止 | `pending` |
+| T-20260428-402 | [infra/render] Playwright BrowserPool | `infra-render-pool.md` §4, §5, §7 | 新建 `infra/render/pool.py` 与 `playwright_backend.py`；实现全局并发、per-host 并发、timeout、max_bytes、context 回收和 browser crash 重建 | 单元测试 + fake backend：并发不超限；timeout / crash / bytes_exceeded error_kind 正确 | `pending` |
+| T-20260428-403 | [infra/crawl] CrawlEngine render fallback 接入 | `infra-render-pool.md` §2, §6；`infra-crawl-engine.md` §5 | runner 在静态 fetch + parse 失败或 adapter `should_render` 命中后调用 renderer；`fetch_record.rendered=1`；render DOM 通过 BlobStore 落盘并进入 parse | 集成测试：受控 JS fixture 静态失败、render 后写入 `crawl_raw`；NDRC direct 路径不触发 render | `pending` |
+| T-20260428-404 | [infra/render + frontier] render queue 与 backlog 回压 | `infra-render-pool.md` §5, §8 | 新建单进程 render queue；接入 host cooldown、task render budget、`RENDER_QUEUE_MAX_SIZE`；队列满时低优先级 URL 延后或 DLQ，普通 HTTP 不阻塞 | 单元测试：queue full 后 HTTP 队列继续；per-host cooldown 共享；budget 耗尽不再 render | `pending` |
+| T-20260428-405 | [infra/harness] headless 合规扫描与 adapter 门槛 | `infra-render-pool.md` §3, §10；`codegen-output-contract.md` §2.3 | harness 禁止 `stealth`、`captcha_solver`、`undetected_chromedriver` 等；`render_mode=headless` adapter 必须提供 `should_render` 或 fixture 证明；challenge fixture 判 red | 单元测试：违规词拦截；缺少 render 证据拦截；challenge 不渲染 | `pending` |
+| T-20260428-406 | [docs/eval-test] Render Pool 验收 fixtures | `infra-render-pool.md` §11 | 增加受控 fixtures：JS shell、无限滚动简化页、captcha/challenge、robots disallow、browser crash；写 `docs/eval-test/render-pool-20260428.md` | Eval 工件含每个 fixture 的 green/red 证据；真实 JS 站点小样本 `raw_records_written >= 1` | `pending` |
+
+### 边界护栏
+
+- **不做** captcha solver、滑块、人类行为模拟、stealth 指纹伪装。
+- **不做** 自动登录、凭据管理、付费墙访问。
+- **不做** 代理轮换或为绕过保护而切出口。
+- **不做** 分布式 render farm；v1 仅单进程池，扩容另立 plan。
+- **不让** headless 成为默认路径；必须有 render decision reason。
+- **不放宽** `infra-fetch-policy.md` 中 robots、Retry-After、cooldown、warm-up 的约束。
+
+### 完成标准（提升后启用）
+
+`green` 仅当：
+
+- 第 3 节 6 个任务全部 `completed`
+- `RENDER_POOL_ENABLED=false` 时所有 headless adapter 均显式拒绝，不静默降级
+- 受控 JS shell fixture 能 render 后入库，challenge / robots fixture 均不渲染
+- `fetch_record.rendered=1`、render DOM blob、decision reason 与指标可回放
+- NDRC 等 direct adapter 回归不触发 renderer，原有测试全绿
