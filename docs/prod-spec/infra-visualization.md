@@ -6,7 +6,7 @@
 >
 > **背景**：暂无 Grafana / 其他 BI。需要让 ops/dev 在浏览器看到运行状态，
 > 但又不引入新的基础设施服务。本 spec 给出**单进程内嵌 Web 服务 + 服务
-> 端渲染** 的最小可视化方案，与 `observability.md` 同源数据
+> 端渲染** 的最小可视化方案，与 `infra-observability.md` 同源数据
 > （`metric_snapshot` 表）。
 
 ## 1. 范围
@@ -98,7 +98,7 @@
 
 ## 8. 与其它 spec 的接口
 
-- 数据来源：`observability.md`（指标）、`infra-resilience.md`（checkpoint）、`gov-policy-layout.md`（业务表）
+- 数据来源：`infra-observability.md`（指标）、`infra-resilience.md`（checkpoint）、`gov-policy-layout.md`（业务表）
 - 操作 API（暂停 / 重启）调用：`infra/checkpoint/` 提供的 `pause_task` / `resume_task`
 - 鉴权配置：与外部 task 项目无关；本仓库自管
 

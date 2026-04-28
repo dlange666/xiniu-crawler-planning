@@ -144,7 +144,7 @@ Canary 的"流量"来自：
 
 ## 5. L8 · 审计与告警链路
 
-每次自动合并 / 升档 / 回滚 都打 IM webhook（沿用 `observability.md` §7 的
+每次自动合并 / 升档 / 回滚 都打 IM webhook（沿用 `infra-observability.md` §7 的
 通道），即使 observability 整体暂缓，本 spec 也要求**最小审计链路**：
 
 | 事件 | webhook payload 必含 |
@@ -185,8 +185,8 @@ warm-up"。
 | Adapter 文件结构 / 默认 sink schema / harness 最低门槛 | `codegen-output-contract.md` |
 | Sandbox 白名单（按 tier 提供） | `infra-deployment.md` + `codegen-output-contract.md` |
 | 限流 warm-up | `infra-fetch-policy.md` §3（本 spec 调用方） |
-| 审计 webhook 通道 | `observability.md` §7 |
-| 解析失败率 / 反爬事件指标 | `observability.md` §3 |
+| 审计 webhook 通道 | `infra-observability.md` §7 |
+| 解析失败率 / 反爬事件指标 | `infra-observability.md` §3 |
 
 ## 8. 不在本 spec 范围
 

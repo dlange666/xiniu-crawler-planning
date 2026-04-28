@@ -1,7 +1,7 @@
 # <评估标题>
 
-> **类型**：`experiment-artifact | acceptance-report | regression-check | adversarial-case`
-> **关联**：Plan/Task/Experiment ID（如 `PLAN-...` / `T-...` / `EXP-...`）
+> **类型**：`acceptance-report | regression-check | adversarial-case | ad-hoc-comparison`
+> **关联**：Plan/Task ID（如 `PLAN-...` / `T-...`）
 > **作者**：Evaluator
 > **日期**：YYYY-MM-DD
 > **判定**：`green | red | partial`（partial 必须在 §6 写出阻塞项）
@@ -21,7 +21,7 @@
 | 复现命令 | 例：`uv run scripts/eval_prompt.py --task T-... --snapshot test_xxx.db` |
 | 临时 DB 路径 | `runtime/db/test_<task_id>_<ts>.db`（来源说明） |
 
-> 控制组与候选组**必须**使用同一 DB 快照（experiment 硬规则）。
+> 控制组与候选组**必须**使用同一 DB 快照与同一数据切片，避免数据漂移污染对比。
 
 ## 3. 度量结果 · 聚合
 

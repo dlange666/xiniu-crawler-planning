@@ -3,7 +3,7 @@
 ## 1. 元信息
 
 - **Plan ID**：`PLAN-20260428-OBSERVABILITY-BOOTSTRAP`
-- **关联规格**：`docs/prod-spec/observability.md`（零自建后台版）、`docs/prod-spec/infra-resilience.md`
+- **关联规格**：`docs/prod-spec/infra-observability.md`（零自建后台版）、`docs/prod-spec/infra-resilience.md`
 - **状态**：`deferred`（不进入 MVP；MVP 跑稳后由 Planner 决定何时提升）。登记 TD-013
 - **里程碑**：M-Observability（≈1.5 周）
 
@@ -17,10 +17,10 @@
 
 | 任务 ID | 标题 | 实现细节 | 验证方式 | 状态 |
 |---|---|---|---|---|
-| T-20260428-301 | [infra/observability] recorder + snapshot flusher | `infra/observability/recorder.py` 提供 `incr/observe/set` API（接口与 prometheus-client 兼容）；进程内聚合；每 60s flush 到 `metric_snapshot` 表（按 `observability.md` §3）；按 §4 注册 8 个采集负载指标；与 frontier、http、parse hook 点连接 | 单元测试：跑 fake 任务后查表得到 8 个指标；recorder 接口签名与 prometheus-client 等价 | `pending` |
-| T-20260428-302 | [scripts] OSS 用量轮询 | `scripts/observe_oss_usage.py`：调阿里云 OSS API 按 `observability.md` §5 写入 4 个指标到 metric_snapshot；外部 cron 每小时触发；月成本估算公式从配置读 | 单元测试：mock OSS 响应；月成本与字节数同方向；运行后 metric_snapshot 有对应行 | `pending` |
+| T-20260428-301 | [infra/observability] recorder + snapshot flusher | `infra/observability/recorder.py` 提供 `incr/observe/set` API（接口与 prometheus-client 兼容）；进程内聚合；每 60s flush 到 `metric_snapshot` 表（按 `infra-observability.md` §3）；按 §4 注册 8 个采集负载指标；与 frontier、http、parse hook 点连接 | 单元测试：跑 fake 任务后查表得到 8 个指标；recorder 接口签名与 prometheus-client 等价 | `pending` |
+| T-20260428-302 | [scripts] OSS 用量轮询 | `scripts/observe_oss_usage.py`：调阿里云 OSS API 按 `infra-observability.md` §5 写入 4 个指标到 metric_snapshot；外部 cron 每小时触发；月成本估算公式从配置读 | 单元测试：mock OSS 响应；月成本与字节数同方向；运行后 metric_snapshot 有对应行 | `pending` |
 | T-20260428-303 | [infra/ai] LiteLLM gateway 接入 + 成本指标 | `infra/ai/llm_client.py` 默认走 LiteLLM（OpenAI 兼容协议指向 `LITELLM_BASE_URL`），透传 `x-litellm-tags=task=...,context=...`；`scripts/observe_llm_spend.py` 每 10min 调 `/spend/get` 写入 6 个指标；预算守门按 §6 三档生效（剩余 < 20%/5%/0%） | 单元测试：mock LiteLLM；标签透传正确；预算三档行为正确；指标写表 | `pending` |
-| T-20260428-304 | [scripts] 告警脚本 + IM webhook | `scripts/observe_check.py`：按 `observability.md` §7 跑 8 条告警 SQL；命中即 POST 到 `OBSERVE_WEBHOOK_URL`（钉钉/飞书/企微）；payload 格式见 §7；外部 cron 每 5min 触发 | 单元测试：注入超阈值数据 → webhook 收到正确 payload；空数据不触发；webhook 故障不影响主流程 | `pending` |
+| T-20260428-304 | [scripts] 告警脚本 + IM webhook | `scripts/observe_check.py`：按 `infra-observability.md` §7 跑 8 条告警 SQL；命中即 POST 到 `OBSERVE_WEBHOOK_URL`（钉钉/飞书/企微）；payload 格式见 §7；外部 cron 每 5min 触发 | 单元测试：注入超阈值数据 → webhook 收到正确 payload；空数据不触发；webhook 故障不影响主流程 | `pending` |
 | T-20260428-305 | [docs/eval-test] M-Observability 验收 | 用一个跑 24h 的小流量任务作为基线；查询 metric_snapshot 与告警历史；写入 `docs/eval-test/` 报告 | 工件含 18 个指标的真实数值 + 至少一次告警 webhook 投递记录 | `pending` |
 
 ## 4. 边界护栏

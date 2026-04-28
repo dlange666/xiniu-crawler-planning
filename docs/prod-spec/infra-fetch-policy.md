@@ -66,7 +66,7 @@ RAMP_UP_DEMOTE_ANTI_BOT_TO      = "L0+10min cooldown"
 RAMP_UP_MIN_RPS_FLOOR           = 0.05                       # 即便 ×10% < 0.05 也按 0.05 跑
 ```
 
-> 与 `auto-merge-policy.md` §6 的对应关系：auto-merge 强制 canary，canary
+> 与 `codegen-auto-merge.md` §6 的对应关系：auto-merge 强制 canary，canary
 > 强制 warm-up；二者协同保证"自动合并的新 adapter 不会一上线就把 host 打满"。
 
 ## 3. 重试策略
@@ -229,5 +229,5 @@ emergency_window_sec        = 600
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
-| rev 2 | 2026-04-28 | 新增 §2.3 限流分级启动（warm-up）：4 级阶梯（10%/30%/60%/100%）+ 升降级触发条件 + 默认参数；§8 默认值表追加 ramp-up 相关；为 `auto-merge-policy.md` canary 提供基础 | — |
+| rev 2 | 2026-04-28 | 新增 §2.3 限流分级启动（warm-up）：4 级阶梯（10%/30%/60%/100%）+ 升降级触发条件 + 默认参数；§8 默认值表追加 ramp-up 相关；为 `codegen-auto-merge.md` canary 提供基础 | — |
 | rev 1 | 2026-04-28 | 初稿 | — |

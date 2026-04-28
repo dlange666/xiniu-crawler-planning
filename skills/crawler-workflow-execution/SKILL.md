@@ -53,7 +53,6 @@ description: 当任务属于 xiniu-crawler 仓库主交付环路时使用。本 
 - 新建 docs 文档必须从对应模板起手：
   - `docs/exec-plan/template.md`
   - `docs/task/template.md`
-  - `docs/experiment/template.md`
   - `docs/prod-spec/template.md`
   - `docs/eval-test/template.md`
 

@@ -46,11 +46,11 @@
 
 - `docs/prod-spec/infra-fetch-policy.md` —— 限流/重试/反爬识别/紧急止损
 - `docs/prod-spec/infra-resilience.md` —— 增量抓取/checkpoint/版本巡检/异常分级
-- `docs/prod-spec/observability.md` —— 三类核心指标与告警阈值（零自建后台版）
+- `docs/prod-spec/infra-observability.md` —— 三类核心指标与告警阈值（零自建后台版）
 - `docs/prod-spec/infra-visualization.md` —— 自建轻量看板形态
 - `docs/prod-spec/infra-deployment.md` —— 主从分布部署 + 自建分发协议
 - `docs/prod-spec/codegen-output-contract.md` —— Adapter 内部架构 + 默认 sink schema + harness 门槛 + prompt 框架
-- `docs/prod-spec/auto-merge-policy.md` —— 跳过人审的安全网（tier 划分 + 加压门槛 + 渐进 canary + 自动回滚 + 审计）
+- `docs/prod-spec/codegen-auto-merge.md` —— 跳过人审的安全网（tier 划分 + 加压门槛 + 渐进 canary + 自动回滚 + 审计）
 - `docs/prod-spec/data-model.md` —— 所有表 DDL 与索引的唯一权威源
 
 ## 反向依赖禁令

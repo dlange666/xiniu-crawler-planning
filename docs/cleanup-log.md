@@ -5,8 +5,10 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-28 | 移除 experiment 工作流 | 删除 `docs/experiment/`、`skills/crawler-workflow-experiment/`；AGENTS.md `Operating Flows` 去掉 Experiment Flow 节、Repository Map 与 docs lifecycle 列表去掉 experiment；`crawler-workflow` 路由 4 → 3 项；`crawler-workflow-execution` 模板列表 5 → 4 项；`docs/eval-test/template.md` 类型去掉 experiment-artifact，改为 acceptance/regression/adversarial/ad-hoc | Cleaner |
+| 2026-04-28 | prod-spec 命名收敛 | `observability.md` → `infra-observability.md`；`auto-merge-policy.md` → `codegen-auto-merge.md`；新建 `docs/prod-spec/README.md` 作为索引；AGENTS.md `Spec Versioning` 加命名约定（业务/infra-/codegen-/单名 4 类） | Cleaner |
 | 2026-04-28 | 数据模型集中化 | 新建 `data-model.md`（21 张表统一 DDL 权威源；最小化 JSON）；重构 `crawl_task` 单表 → 4 张表（task / generation / execution / run）+ 3 子表 + 1 审计；`codegen-output-contract.md` rev 2、`infra-deployment.md` rev 3、design 提案 §3 全部改为引用 data-model.md，避免双源不一致 | Planner |
-| 2026-04-28 | 跳过人审安全网 | 新建 `auto-merge-policy.md`（tier 1/2/3 分级 + 加压 harness + 4 档渐进 canary + 自动回滚 + IM 审计）；`infra-fetch-policy.md` rev 2 加 §2.3 限流分级启动 warm-up；codegen 设计提案状态机扩为 canary_stage_0/1/2/3 + rolled_back；M3.5 plan 加 T-212~216；TD-016/017 登记 L4/L5 后续优化 | Planner |
+| 2026-04-28 | 跳过人审安全网 | 新建 `codegen-auto-merge.md`（tier 1/2/3 分级 + 加压 harness + 4 档渐进 canary + 自动回滚 + IM 审计）；`infra-fetch-policy.md` rev 2 加 §2.3 限流分级启动 warm-up；codegen 设计提案状态机扩为 canary_stage_0/1/2/3 + rolled_back；M3.5 plan 加 T-212~216；TD-016/017 登记 L4/L5 后续优化 | Planner |
 | 2026-04-28 | 借鉴上一版 OpenCode 实现 | 新建 `codegen-output-contract.md`（adapter 架构 + 默认 sink schema + harness 门槛 + prompt 拆分）；`infra-resilience.md` rev 2 加 §2.5 心跳与卡死恢复；`infra-deployment.md` rev 2 加 §3.4 SKIP LOCKED 与 master_lease SQL；codegen 设计提案 task 模型加 scope/crawl_mode/crawl_until/full_crawl_cron/heartbeat_at | Planner |
 | 2026-04-28 | spec 版本治理 | 6 份 spec 去 `-v1` 后缀；统一 frontmatter（rev / 最近修订 / 状态）+ `## 修订历史`；新建 `docs/prod-spec/template.md`、`docs/eval-test/template.md`；AGENTS.md 加 Spec Versioning 硬规则；crawler-workflow / execution skill 加 spec 编辑前置检查 | Planner |
 | 2026-04-28 | README 归档 | `domains/README.md` → `docs/domains-overview.md`；`domains/gov_policy/README.md` → `docs/gov-policy-layout.md`；`infra/README.md` → `docs/infra-overview.md`。仓库只保留顶层 `README.md` | Cleaner |

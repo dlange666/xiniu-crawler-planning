@@ -14,7 +14,7 @@ Read this file before starting work. It is the repository control map.
 | `CLAUDE.md`, `AGENTS.md`, `README.md` | 根控制文档与人类入口 |
 | `docs/architecture.md`, `docs/product-sense.md` | 架构、产品方向（不含具体业务字段） |
 | `docs/domains-overview.md`, `docs/gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
-| `docs/exec-plan/`, `docs/task/`, `docs/experiment/`, `docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、实验执行、清理记录 |
+| `docs/exec-plan/`, `docs/task/`, `docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、清理记录 |
 | `docs/eval-test/` | 评估证据与回放产物 |
 | `docs/prod-spec/`, `docs/research/` | 长期参考文档：产品规格与研究底稿（业务细节归此） |
 | `domains/<context>/` | bounded-context 业务代码 |
@@ -41,12 +41,6 @@ Read this file before starting work. It is the repository control map.
 `Planner` 更新 spec 并写计划。`Generator` 实现一个已批准任务并更新
 `docs/task/active/` 下的任务文件。`Evaluator` 把证据写入 `docs/eval-test/`
 并更新同一任务状态。`Red` 退回 `Generator`；只有计划全部完成时才 `green`。
-
-### Experiment Flow
-`Hypothesis -> Setup -> Execution -> Artifact -> Communication -> Closure`
-`Generator` 在隔离 worktree 上运行 additive 候选，`Evaluator` 在
-`docs/eval-test/` 写下 retained-vs-candidate 工件。被拒绝的 `Red` 候选代码
-不得进入 merged `main`。
 
 ### Cleanup Flow
 扫描过期代码与运行时产物，清理未引用快照，合并幸存路径，同步文档，并把
@@ -92,16 +86,17 @@ Read this file before starting work. It is the repository control map.
 
 ### Spec Versioning
 - spec 文件名**不带版本号**（用 `infra-fetch-policy.md` 而非 `infra-fetch-policy-v1.md`）。
+- spec 文件名**统一前缀分组**：业务 `<domain>.md`；infra 模块 `infra-<topic>.md`；codegen 平台 `codegen-<topic>.md`；跨域基础（如 `data-model.md`、`template.md`）单名无前缀。新增 spec 必须从 `docs/prod-spec/template.md` 起手。
 - 每份 spec 顶部有引用块 frontmatter：`> **版本**：rev N · **最近修订**：YYYY-MM-DD · **状态**：active|draft|deprecated`。
 - 每份 spec 底部有 `## 修订历史` 表（rev / 日期 / 摘要 / 关联 PR）。
 - 任何 spec 的**实质性改动**（影响实现 / 契约 / 默认值 / 接口）必须同 PR 内：(a) 追加 `## 修订历史` 一行；(b) bump 顶部 rev 号与 `最近修订` 日期。breaking change 在摘要前加 **[breaking]** 前缀。
 - 纯排版、链接修复、错别字不算实质性改动，可不更修订历史。
-- 模板：`docs/prod-spec/template.md`。其它 docs 子目录模板：`docs/{exec-plan,task,experiment,eval-test}/template.md`。
+- 模板：`docs/prod-spec/template.md`。其它 docs 子目录模板：`docs/{exec-plan,task,eval-test}/template.md`。
 
 ### Docs, Data, and Runtime
 - `docs/` 只放文档。新 Markdown 文件用 kebab-case 命名。
 - `docs/` 按生命周期分类，不强行套统一目录形态：
-  - workflow: `docs/exec-plan/`、`docs/task/`、`docs/experiment/`、`docs/cleanup-log.md`
+  - workflow: `docs/exec-plan/`、`docs/task/`、`docs/cleanup-log.md`
   - artifact: `docs/eval-test/`
   - long-lived: `docs/prod-spec/`、`docs/research/`、`docs/architecture.md`、`docs/product-sense.md`
 - `docs/task/` 是状态索引化的工作流目录：active/completed/archive 直接扫描。

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Jisong Workflow Experiment"
-  short_description: "Apply the Hypothesis, Setup, Execution, Artifact, and Decision experiment workflow"
-  default_prompt: "Use $crawler-workflow-experiment to run this experiment through the ROI optimization workflow, following the additive-only and evidence-driven rules in AGENTS.md."

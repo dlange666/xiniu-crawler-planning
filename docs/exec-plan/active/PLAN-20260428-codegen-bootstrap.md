@@ -31,7 +31,7 @@
 | T-20260428-208 | [domains/gov_policy] harness_rules 实装 | 把 T-20260427-113 的占位 stub 实装：`compliance_blocklist`（结合爬虫硬规则禁词）、`field_hit_thresholds`（关键 6 字段命中率）、`schema_path` 指向 v1.json | 注入到 `infra/harness`，跑国务院 + 1 个部委用例验收 | `pending` |
 | T-20260428-209 | [docs/prod-spec] codegen-platform-v1 规格 | 把本研究提案落地为正式 spec `docs/prod-spec/codegen-platform.md`：Task 模型字段定义（与外部项目对齐）、状态机、harness 接口、TaskSource 接口 | 与外部 task 项目负责人对齐确认；评审通过 | `pending` |
 | T-20260428-210 | [端到端验收] 复刻已存在部委任务 | 选一个已合并的部委适配器（如 `ndrc`），构造一个 `task_type=create` 的 task，让 codegen worker 自动重新产出 `ndrc.py` 到隔离分支；harness 全绿 + PR 创建 | 工件：自动生成的 PR URL + harness 报告；与原手写版 diff < 30% 行差异 | `pending` |
-| T-20260428-212 | [infra/codegen + sandbox] Tier 划分与分级合并门槛 | 实现 `auto-merge-policy.md` §2：按 PR diff 路径计算 tier；sandbox 写白名单按 tier 注入；tier-3 路径出现 → 直接拒绝 | 单元测试：构造 3 类 PR diff，tier 判定与白名单生效正确；tier-3 越权被拦截 | `pending` |
+| T-20260428-212 | [infra/codegen + sandbox] Tier 划分与分级合并门槛 | 实现 `codegen-auto-merge.md` §2：按 PR diff 路径计算 tier；sandbox 写白名单按 tier 注入；tier-3 路径出现 → 直接拒绝 | 单元测试：构造 3 类 PR diff，tier 判定与白名单生效正确；tier-3 越权被拦截 | `pending` |
 | T-20260428-213 | [infra/harness] 加压门槛与扩展禁词 | 落实 §3：golden ≥ 10 / E2E ≥ 20 行 / schema ≥ 98% / 关键字段 ≥ 99% / 30+ 条扩展禁词 (`infra/harness/blocklist.yaml`)；tier-2 现役回归 | 单元测试：注入合规失败 / 字段缺失 / 现役回归失败用例，harness 全部拦截 | `pending` |
 | T-20260428-214 | [infra/scheduler] 渐进 canary + 自动回滚 | 实现 §4：4 档分流 (0/1/10/100%)；按 tier 不同观察期；任一失败阈值命中 → 回退 adapter + 创建 fix-task；与 §6 warm-up 联动 | 单元测试：模拟阶段升降级；模拟失败触发回滚与 fix-task 写库 | `pending` |
 | T-20260428-215 | [scripts] 自动合并 IM 审计与回放链路 | 实现 §5：4 类事件 webhook 投递；`crawl_task.audit_log` JSON 字段沉淀 PR/harness/agent/canary/rollback 链路 | 单元测试：4 类事件均有 webhook 与 audit_log；缺一项即拒绝进入 tier-1 | `pending` |
