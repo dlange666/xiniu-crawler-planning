@@ -20,6 +20,7 @@
 | T-20260428-301 | [webui] FastAPI UI/API MVP 联通 | `webui.md` rev 5；`data-model.md` §4.1, §4.7 | 新增顶层 `webui/`；FastAPI + Jinja2 MVP 页面；`/api/tasks` 与 `/api/tasks/{id}/timeseries`；DevBackend；SQLite MVP 表；写审计 | pytest 覆盖页面 200、API JSON、POST 新任务写 `crawl_task` + `webui_audit`、viewer 写操作 403、production+dev 拒绝启动 | `verifying` |
 | T-20260428-302 | [webui/frontend] React + Ant Design Pro 重写 | `webui.md` rev 12 §2, §3, §7, §12 | 新增 `webui/frontend`：React + TypeScript + Vite + Ant Design ProComponents；FastAPI 新增 `/api/tasks/{id}`、`/api/adapters`、`/api/tasks/{id}/items/{raw_id}` 并托管 `/ui` SPA；前端实现任务列表、source 详情单表 Tabs（全部 / 已采集 / 未采集）、列表只显示按钮/状态、站内采集详情页、详情页 Attachments 下展开 depth+1 子链接、adapter 列表 | `npm run build` 成功；pytest 覆盖新增 API；本地 `/ui` 可访问并展示 runtime DB 数据 | `in_progress` |
 | T-20260429-101 | [webui/frontend] 列表展示与对齐优化 | `webui.md` rev 12 §2, §7, §12 | 优化任务列表、URL 列表、Source 参数、入库信息与 metadata 对齐；桌面端提升信息密度，小屏双栏区域自动堆叠；Playwright 截图人工核验 | `npm run build` 成功；`uv run pytest tests/webui -q` 通过；`uv run ruff check webui tests/webui` 通过；Playwright 访问 `/ui`、任务详情、采集详情桌面/移动视口无重叠；PR #5 | `completed` |
+| T-20260429-102 | [webui/frontend] 入库信息子链接 label 对齐 | `webui.md` rev 12 §7, §12 | 将采集详情页 child_links 从 Attachments value 内部列表改为独立入库信息行；“解读/附件/链接”复用同一 label 栅格，右侧链接内容与源 URL、Raw blob 等 value 左边缘对齐 | `npm run build` 成功；Playwright 访问采集详情页核验入库信息区无错位；截图产物不入 git | `verifying` |
 
 ## 4. 边界护栏
 

@@ -39,6 +39,17 @@
       "assignee": "generator",
       "last_updated": "2026-04-29T00:24:29+08:00",
       "notes": "优化任务列表首列/Source 列避免重叠；URL 列表按标题、URL、fp 分层展示并固定列宽；Source 参数、入库信息和 metadata 使用固定 label 网格；移动端双栏区域自动堆叠。验证：npm run build -> passed；uv run pytest tests/webui -q -> 5 passed；uv run ruff check webui tests/webui -> passed；Playwright 桌面/移动视口访问 /ui、任务详情、采集详情无重叠。Playwright 截图产物仅保存在 /tmp/xiniu-webui-polish，不加入 git。PR：https://github.com/dlange666/xiniu-crawler-planning/pull/5。"
+    },
+    {
+      "id": "T-20260429-102",
+      "title": "[webui/frontend] 入库信息子链接 label 对齐",
+      "status": "verifying",
+      "plan_id": "plan-20260428-webui-bootstrap",
+      "spec_ref": "webui.md rev 12 §7, §12",
+      "dependency": ["T-20260429-101"],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T00:33:02+08:00",
+      "notes": "将采集详情页 child_links 从 Attachments value 内部列表改为独立入库信息行；“解读/附件/链接”复用 storage-info label 栅格，右侧链接内容与源 URL、Raw blob、Created at 等 value 左边缘对齐。Playwright 截图产物只允许保存在 /tmp，不加入 git。待 PR 创建后标 completed。"
     }
   ]
 }

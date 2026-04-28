@@ -495,14 +495,14 @@ function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
   const { task, item } = detail;
   const metadataEntries = Object.entries(item.source_metadata || {});
   const childLinks = item.child_links || [];
-  const renderChildLinkType = (row: ChildLink) => {
-    const label = row.link_type === 'attachment'
+  const childLinkTypeLabel = (row: ChildLink) => (
+    row.link_type === 'attachment'
       ? '附件'
       : row.link_type === 'interpret'
         ? '解读'
-        : '链接';
-    return <Tag color={row.link_type === 'attachment' ? 'orange' : 'blue'}>{label}</Tag>;
-  };
+        : '链接'
+  );
+  const childLinkTypeColor = (row: ChildLink) => (row.link_type === 'attachment' ? 'orange' : 'blue');
 
   return (
     <PageContainer
@@ -541,31 +541,32 @@ function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
             <div className="storage-info-row">
               <div className="storage-info-label">Attachments</div>
               <div className="storage-info-value">
-                <Space direction="vertical" size={6} className="attachment-list">
-                  <Typography.Text>{item.attachments?.length || 0}</Typography.Text>
-                  {childLinks.map((row) => (
-                    <div className="attachment-list-item" key={row.url}>
-                      <Space size={8} align="start">
-                        {renderChildLinkType(row)}
-                        <Space direction="vertical" size={2} className="child-link-text">
-                          <Typography.Link
-                            href={row.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            strong={row.link_type === 'attachment'}
-                          >
-                            {row.filename || compactUrl(row.url)}
-                          </Typography.Link>
-                          <Typography.Text type="secondary" copyable={{ text: row.url }} className="mono child-url">
-                            {compactUrl(row.url)}
-                          </Typography.Text>
-                        </Space>
-                      </Space>
-                    </div>
-                  ))}
-                </Space>
+                <Typography.Text>{item.attachments?.length || 0}</Typography.Text>
               </div>
             </div>
+            {childLinks.map((row) => (
+              <div className="storage-info-row child-link-row" key={row.url}>
+                <div className="storage-info-label child-link-label">
+                  <Tag color={childLinkTypeColor(row)}>{childLinkTypeLabel(row)}</Tag>
+                </div>
+                <div className="storage-info-value">
+                  <Space direction="vertical" size={2} className="child-link-text">
+                    <Typography.Link
+                      href={row.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      strong={row.link_type === 'attachment'}
+                      className="child-link-title"
+                    >
+                      {row.filename || compactUrl(row.url)}
+                    </Typography.Link>
+                    <Typography.Text type="secondary" copyable={{ text: row.url }} className="mono child-url">
+                      {compactUrl(row.url)}
+                    </Typography.Text>
+                  </Space>
+                </div>
+              </div>
+            ))}
           </div>
         </ProCard>
       </ProCard>
