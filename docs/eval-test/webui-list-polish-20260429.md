@@ -4,6 +4,7 @@
 > **关联**：`plan-20260428-webui-bootstrap` / `T-20260429-101`
 > **验证 spec**：`webui.md` rev 12 §2, §7, §12
 > **日期**：2026-04-29
+> **PR**：https://github.com/dlange666/xiniu-crawler-planning/pull/5
 > **判定**：`green`
 
 ## 1. 目标
