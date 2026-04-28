@@ -1,16 +1,14 @@
-"""T-20260427-107/108 验收：NDRC adapter 解析黄金用例。"""
+"""NDRC adapter 验收：黄金用例 + ADAPTER_META 完整性。"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from domains.gov_policy import adapters
+import pytest
+
 from domains.gov_policy.adapters import ndrc
-from domains.gov_policy.model import SeedSpec
-from domains.gov_policy.parse import (
-    parse_detail_via_adapter,
-    parse_list_via_adapter,
-)
+from infra import adapter_registry
+from infra.crawl import SeedSpec
 
 GOLDEN_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/golden/ndrc"
 
@@ -29,9 +27,11 @@ def test_adapter_meta_complete() -> None:
 
 
 def test_resolve_via_registry() -> None:
-    mod = adapters.resolve("www.ndrc.gov.cn")
-    assert mod is ndrc
-    assert "www.ndrc.gov.cn" in adapters.list_registered()
+    adapter_registry.reset()
+    adapter_registry.discover()
+    entry = adapter_registry.get("gov_policy", "www.ndrc.gov.cn")
+    assert entry.module is ndrc
+    assert "www.ndrc.gov.cn" in {e.host for e in adapter_registry.list_all()}
 
 
 def test_build_list_url_page0() -> None:
@@ -43,46 +43,52 @@ def test_build_list_url_page0() -> None:
 
 
 def test_parse_list_extracts_detail_links() -> None:
-    """用真实下载的列表页快照验证 parse_list 正确性。"""
     sample = GOLDEN_DIR / "list_page.html"
     if not sample.exists():
-        # 测试环境无快照时跳过
-        import pytest
         pytest.skip(f"no golden list snapshot at {sample}")
     html = sample.read_bytes().decode("utf-8", errors="replace")
-    result = parse_list_via_adapter(
-        "www.ndrc.gov.cn", html,
-        "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/",
-    )
+    result = ndrc.parse_list(
+        html, "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/")
     assert len(result.detail_links) >= 5, f"expect ≥ 5 detail links, got {len(result.detail_links)}"
     for link in result.detail_links:
         assert link.startswith("https://www.ndrc.gov.cn/xxgk/zcfb/")
         assert link.endswith(".html")
 
 
+def test_parse_list_emits_pagination() -> None:
+    """新功能：parse_list 通过 createPageHTML 发现翻页 URL。"""
+    sample = GOLDEN_DIR / "list_page.html"
+    if not sample.exists():
+        pytest.skip("no golden list snapshot")
+    html = sample.read_bytes().decode("utf-8", errors="replace")
+    result = ndrc.parse_list(
+        html, "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/")
+    # createPageHTML(9, 0, "index", "html") → 9 页（index.html + index_1..8.html）
+    assert len(result.next_pages) >= 4, f"expect ≥ 4 paginated URLs, got {len(result.next_pages)}"
+    urls = result.next_pages
+    assert any("index_1.html" in u for u in urls)
+    assert any("index_8.html" in u for u in urls)
+
+
 def test_parse_detail_extracts_title_and_body() -> None:
     sample = GOLDEN_DIR / "detail_sample.html"
     if not sample.exists():
-        import pytest
-        pytest.skip(f"no golden detail snapshot at {sample}")
+        pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
-    result = parse_detail_via_adapter(
-        "www.ndrc.gov.cn", html,
+    result = ndrc.parse_detail(
+        html,
         "https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/202604/t20260409_1404577.html",
     )
     assert result.title, "title should not be empty"
     assert "电力" in result.title or "重大事故" in result.title or len(result.title) > 5
     assert len(result.body_text) > 100, f"body too short: {len(result.body_text)}"
-    # 元数据
     meta = result.source_metadata.raw
-    assert any(k in meta for k in ("发布时间", "来源")), f"meta should contain at least one common key, got: {meta}"
+    assert any(k in meta for k in ("发布时间", "来源")), \
+        f"meta should contain at least one common key, got: {meta}"
 
 
 def test_parse_detail_handles_minimal_html() -> None:
-    """边界用例：极简 html 不崩溃。"""
     html = "<html><body><h1>测试政策</h1><div class='article'>正文内容很短</div></body></html>"
-    result = parse_detail_via_adapter(
-        "www.ndrc.gov.cn", html, "https://www.ndrc.gov.cn/x/y/z.html",
-    )
+    result = ndrc.parse_detail(html, "https://www.ndrc.gov.cn/x/y/z.html")
     assert result.title == "测试政策"
     assert "正文内容很短" in result.body_text

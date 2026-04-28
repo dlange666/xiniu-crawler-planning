@@ -148,20 +148,62 @@ class SqliteMetadataStore:
                  depth, parent_url_fp, discovery_source),
             )
 
-    def insert_fetch_record(self, *, task_id: int, url_fp: str, attempt: int,
+    def mark_url_record_state(self, *, task_id: int, url_fp: str, state: str) -> None:
+        with self._conn:
+            self._conn.execute(
+                "UPDATE url_record SET frontier_state=?, "
+                "updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') "
+                "WHERE task_id=? AND url_fp=?",
+                (state, task_id, url_fp),
+            )
+
+    def list_pending_url_records(self, *, task_id: int) -> list[dict]:
+        cur = self._conn.execute(
+            """SELECT url, url_fp, host, depth, parent_url_fp, discovery_source
+            FROM url_record
+            WHERE task_id=? AND frontier_state='pending'
+            ORDER BY depth ASC, url_fp ASC""",
+            (task_id,),
+        )
+        return [
+            {
+                "url": r[0], "url_fp": r[1], "host": r[2],
+                "depth": r[3], "parent_url_fp": r[4],
+                "discovery_source": r[5],
+            }
+            for r in cur.fetchall()
+        ]
+
+    def has_url_records_for_task(self, *, task_id: int) -> bool:
+        cur = self._conn.execute(
+            "SELECT 1 FROM url_record WHERE task_id=? LIMIT 1", (task_id,))
+        return cur.fetchone() is not None
+
+    def insert_fetch_record(self, *, task_id: int, url_fp: str,
                             status_code: int | None, content_type: str | None,
                             bytes_received: int | None, latency_ms: int | None,
                             etag: str | None, last_modified: str | None,
-                            error_kind: str | None, error_detail: str | None) -> None:
+                            error_kind: str | None, error_detail: str | None) -> int:
+        """attempt 自动递增 = max(已有) + 1。
+
+        重启续抓时同 (task_id, url_fp) 的下一次 attempt 会取 N+1，避免 UNIQUE 冲突。
+        """
         with self._conn:
+            cur = self._conn.execute(
+                "SELECT COALESCE(MAX(attempt), 0) FROM fetch_record "
+                "WHERE task_id=? AND url_fp=?", (task_id, url_fp),
+            )
+            row = cur.fetchone()
+            next_attempt = (row[0] if row else 0) + 1
             self._conn.execute(
                 """INSERT INTO fetch_record
                 (task_id, url_fp, attempt, status_code, content_type, bytes_received,
                  latency_ms, etag, last_modified, error_kind, error_detail)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (task_id, url_fp, attempt, status_code, content_type, bytes_received,
+                (task_id, url_fp, next_attempt, status_code, content_type, bytes_received,
                  latency_ms, etag, last_modified, error_kind, error_detail),
             )
+        return next_attempt
 
     def insert_crawl_raw(self, *, task_id: int, business_context: str, host: str,
                          url: str, canonical_url: str, url_hash: str,
@@ -182,6 +224,11 @@ class SqliteMetadataStore:
         except sqlite3.IntegrityError:
             # url_hash UNIQUE 冲突 → 已存在
             return False
+
+    def is_url_in_crawl_raw(self, *, url_hash: str) -> bool:
+        cur = self._conn.execute(
+            "SELECT 1 FROM crawl_raw WHERE url_hash = ? LIMIT 1", (url_hash,))
+        return cur.fetchone() is not None
 
     def count_crawl_raw(self, task_id: int) -> int:
         cur = self._conn.execute(

@@ -28,7 +28,9 @@
 | `infra-deployment.md` | 主从分布 / 自建分发 / SKIP LOCKED / master lease | MVP 单进程；扩展期升级（TD-015） |
 | **Infra · 可观测与可视化** | | |
 | `infra-observability.md` | 采集负载 / 存储 / AI 成本指标 + cron 告警 + LiteLLM | MVP 暂缓（TD-013） |
-| `infra-visualization.md` | 自建轻量看板（FastAPI + Jinja2 + Chart.js） | MVP 暂缓（TD-014） |
+| `webui.md` | Webui · 任务后台 + 采集监控 + 结果浏览（FastAPI + Jinja2 + Chart.js） · AuthBackend 抽象 | MVP 实施（OAuth 暂缓 TD-018） |
+| **Infra · 通用爬虫引擎** | | |
+| `infra-crawl-engine.md` | CrawlEngine 契约 / BFS-DFS routing order / 4 scope mode / 递归发现 / 翻页 helper | MVP 已实现核心 |
 | **Codegen 平台** | | |
 | `codegen-output-contract.md` | Adapter 内部架构 / 默认 sink / harness 门槛 / prompt 框架 | M3.5 实施 |
 | `codegen-auto-merge.md` | 跳过人审的安全网：tier 分级 / 渐进 canary / 自动回滚 / 审计 | M3.5 实施 |
@@ -40,7 +42,12 @@ domain-gov-policy ──→ data-model（业务表）
                    └→ codegen-output-contract（业务侧 harness_rules / golden / prompt）
 
 codegen-output-contract ─→ codegen-auto-merge（tier 与 canary 触发条件）
-                         └→ data-model（crawl_raw 等）
+                         ├→ data-model（crawl_raw 等）
+                         └→ infra-crawl-engine（adapter 协议被引擎调度）
+
+infra-crawl-engine ──→ infra-{fetch-policy,resilience}（HTTP / robots / 增量）
+                    ├→ data-model（url_record / fetch_record / crawl_raw）
+                    └→ codegen-output-contract（消费 ParseListResult / ParseDetailResult）
 
 codegen-auto-merge ──→ infra-fetch-policy（warm-up 联动）
                     └→ infra-observability（审计 webhook 通道）
@@ -49,6 +56,10 @@ infra-fetch-policy ←→ infra-resilience（互补：礼貌 vs 高效）
 infra-resilience  ──→ data-model（task_checkpoint / crawl_dlq / url_record）
 infra-deployment  ──→ data-model（master_lease / 4 张 task 表）
 infra-observability ──→ data-model（metric_snapshot / alert_history）
+
+webui ──→ data-model（crawl_task 写、url_record / fetch_record / crawl_raw 读、webui_audit）
+       ├→ infra-adapter-registry（/adapters 列表）
+       └→ infra-observability（监控视图依赖 metric_snapshot；TD-013 之前用既有 4 表降级）
 ```
 
 > 修改 spec 必须同 PR 追加 `## 修订历史` 一行并 bump frontmatter rev。详

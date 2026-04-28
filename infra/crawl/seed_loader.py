@@ -1,4 +1,4 @@
-"""Seed 加载器：YAML → SeedSpec。"""
+"""Seed YAML 加载器（business-agnostic）。"""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import yaml
 
-from domains.gov_policy.model import SeedSpec
+from .types import SeedSpec
 
 
-def load_seed(yaml_path: Path) -> SeedSpec:
+def load_seed(yaml_path: Path | str) -> SeedSpec:
     with Path(yaml_path).open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return SeedSpec(

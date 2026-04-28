@@ -1,6 +1,6 @@
 # 数据模型 · 表与索引权威标准
 
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
 > **实施状态**：本 spec 是**所有表 DDL 的唯一权威来源**。各业务/能力 spec 描述设计动机与字段语义，本 spec 给最终落库的完整 SQL 与索引。
 
 > **写作约定**：
@@ -472,6 +472,38 @@ CREATE TABLE metric_snapshot (
 -- 按 ts 月度分区（PolarDB），90 天后归档；TD-009 合规阶段扩到 180 天
 ```
 
+### 4.7 Webui 审计（rev 2 引入）
+
+#### 4.7.1 `webui_audit` —— webui 写操作的细粒度审计日志
+
+```sql
+CREATE TABLE webui_audit (
+    id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ts           DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    actor        VARCHAR(255) NOT NULL COMMENT '认证用户的 email 或 sub；DevBackend 下取 WEBUI_DEV_USER',
+    role         VARCHAR(20)  NOT NULL COMMENT 'viewer / operator / admin（事件发生时的角色）',
+    action       VARCHAR(64)  NOT NULL COMMENT 'submit_task / cancel_task / pause_task / disable_adapter / set_host_rps / ...',
+    target_type  VARCHAR(32)  NULL COMMENT 'task / adapter / host / null',
+    target_id    VARCHAR(255) NULL,
+    payload      JSON NULL COMMENT '参数差异（如新建任务的字段、改限速的前后值）',
+    ip           VARCHAR(64)  NULL,
+    user_agent   VARCHAR(255) NULL,
+    request_id   VARCHAR(64)  NULL COMMENT '请求级 trace id，便于关联日志',
+    INDEX idx_actor_ts (actor, ts DESC),
+    INDEX idx_action_ts (action, ts DESC),
+    INDEX idx_target (target_type, target_id)
+);
+-- 留存 ≥ 180 天（与 TD-009 合规口径对齐）；超期归档到 OSS Parquet
+```
+
+**写入规则**（见 `webui.md` §6）：
+
+- `webui/app.py` 注册中间件，所有 `POST/PUT/DELETE/PATCH` 命中后写一行；GET 不写
+- `crawl_task.created_by` 在新建任务时同步填 `actor`，方便任务列表直接显示而无需 join
+- 审计字段优先存 `email`；OAuth 阶段若 IdP 不返回 email 则退到 `sub`
+
+> 已存在的 `crawl_task_audit_event`（§4.1.7）不替代本表：前者面向 codegen / 执行链路的事件，后者面向 webui UI 操作。两者按 `request_id` 可关联但 schema 独立。
+
 ## 5. 索引规范
 
 ### 5.1 强制原则
@@ -553,3 +585,4 @@ CREATE TABLE metric_snapshot (
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
 | rev 1 | 2026-04-28 | 初稿 —— 13 张本仓库表 + 外部 task 项目 8 张表的 schema 标准；最小化 JSON（仅 `crawl_raw.data` / `metric_snapshot.labels_json` / `task_checkpoint.cursor_extra` / `task_checkpoint.frontier_snapshot_uri` 4 处保留）；数组用子表；状态用 ENUM；含 PolarDB↔SQLite 映射表 | — |
+| rev 2 | 2026-04-28 | 新增 `webui_audit`（§4.7）—— webui 写操作的细粒度审计日志；明确 `crawl_task.created_by` 由 webui 写入时填认证用户 email/sub，与 codegen 链路的 `crawl_task_audit_event` 不重叠 | `webui.md` rev 2 |

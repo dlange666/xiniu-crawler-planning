@@ -27,11 +27,32 @@ class MetadataStore(Protocol):
                           depth: int, parent_url_fp: str | None,
                           discovery_source: str) -> None: ...
 
-    def insert_fetch_record(self, *, task_id: int, url_fp: str, attempt: int,
+    def mark_url_record_state(self, *, task_id: int, url_fp: str, state: str) -> None:
+        """更新 url_record.frontier_state（pending/in_flight/done/failed/dlq）。"""
+        ...
+
+    def list_pending_url_records(self, *, task_id: int) -> list[dict]:
+        """列出 task 中 frontier_state='pending' 的 URL；用于重启续抓。
+
+        每行返回 dict：url / url_fp / host / depth / parent_url_fp / discovery_source。
+        """
+        ...
+
+    def has_url_records_for_task(self, *, task_id: int) -> bool:
+        """该 task 是否已有 url_record 行（区分新跑 vs 续抓）。"""
+        ...
+
+    def insert_fetch_record(self, *, task_id: int, url_fp: str,
                             status_code: int | None, content_type: str | None,
                             bytes_received: int | None, latency_ms: int | None,
                             etag: str | None, last_modified: str | None,
-                            error_kind: str | None, error_detail: str | None) -> None: ...
+                            error_kind: str | None, error_detail: str | None) -> int:
+        """写入一条 fetch_record；attempt 由实现自动递增（max(已有)+1）。
+
+        重启续抓时不会因 UNIQUE(task_id, url_fp, attempt) 冲突而崩溃。
+        返回本次实际写入的 attempt 值。
+        """
+        ...
 
     def insert_crawl_raw(self, *, task_id: int, business_context: str, host: str,
                          url: str, canonical_url: str, url_hash: str,
@@ -39,6 +60,10 @@ class MetadataStore(Protocol):
                          etag: str | None, last_modified: str | None,
                          run_id: str | None) -> bool:
         """写入 crawl_raw；返回 True=新增 / False=已存在（按 url_hash 去重）。"""
+        ...
+
+    def is_url_in_crawl_raw(self, *, url_hash: str) -> bool:
+        """检查该 url_hash 是否已存在于 crawl_raw（用于重启续抓时跳过已抓 URL）。"""
         ...
 
     def count_crawl_raw(self, task_id: int) -> int: ...

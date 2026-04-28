@@ -23,7 +23,6 @@ import subprocess
 import sys
 import textwrap
 from pathlib import Path
-from urllib.parse import urlparse
 
 
 def open_db() -> sqlite3.Connection:

@@ -65,6 +65,109 @@ def test_crawl_raw_dedup_by_url_hash(tmp_metadata: SqliteMetadataStore) -> None:
     assert tmp_metadata.count_crawl_raw(1) == 1
 
 
+def test_fetch_record_attempt_auto_increments(tmp_metadata: SqliteMetadataStore) -> None:
+    """重启续抓 bug 修复：attempt 由 storage 自动计算，不再因 UNIQUE 冲突崩溃。"""
+    base_args = dict(
+        task_id=1, url_fp="abc123",
+        status_code=200, content_type="text/html",
+        bytes_received=100, latency_ms=10,
+        etag=None, last_modified=None,
+        error_kind=None, error_detail=None,
+    )
+    # 第一次写入 → attempt=1
+    a1 = tmp_metadata.insert_fetch_record(**base_args)
+    assert a1 == 1
+    # 重启场景：再次写入同 (task_id, url_fp) → attempt 自动 +1
+    a2 = tmp_metadata.insert_fetch_record(**base_args)
+    assert a2 == 2
+    # 第三次再来一次
+    a3 = tmp_metadata.insert_fetch_record(**base_args)
+    assert a3 == 3
+    rows = tmp_metadata.fetch_all(
+        "SELECT attempt FROM fetch_record WHERE task_id=? AND url_fp=? ORDER BY attempt",
+        (1, "abc123"))
+    assert [r[0] for r in rows] == [1, 2, 3]
+
+
+def test_fetch_record_attempt_independent_per_url(tmp_metadata: SqliteMetadataStore) -> None:
+    """不同 url_fp 的 attempt 互相独立。"""
+    base = dict(
+        task_id=1, status_code=200, content_type=None,
+        bytes_received=1, latency_ms=1,
+        etag=None, last_modified=None,
+        error_kind=None, error_detail=None,
+    )
+    assert tmp_metadata.insert_fetch_record(url_fp="A", **base) == 1
+    assert tmp_metadata.insert_fetch_record(url_fp="B", **base) == 1
+    assert tmp_metadata.insert_fetch_record(url_fp="A", **base) == 2
+    assert tmp_metadata.insert_fetch_record(url_fp="B", **base) == 2
+
+
+def test_is_url_in_crawl_raw(tmp_metadata: SqliteMetadataStore) -> None:
+    """重启续抓：is_url_in_crawl_raw 用于跳过已抓 URL。"""
+    assert tmp_metadata.is_url_in_crawl_raw(url_hash="not-yet") is False
+    tmp_metadata.insert_crawl_raw(
+        task_id=1, business_context="gov_policy", host="x.com",
+        url="https://x.com/a", canonical_url="https://x.com/a",
+        url_hash="hash-A", content_sha256="sha",
+        raw_blob_uri="file:///tmp/a", data_json="{}",
+        etag=None, last_modified=None, run_id=None,
+    )
+    assert tmp_metadata.is_url_in_crawl_raw(url_hash="hash-A") is True
+    assert tmp_metadata.is_url_in_crawl_raw(url_hash="hash-B") is False
+
+
+def test_url_record_state_transitions(tmp_metadata: SqliteMetadataStore) -> None:
+    """checkpoint 恢复：mark_url_record_state 改 frontier_state 列。"""
+    tmp_metadata.upsert_url_record(
+        task_id=1, url_fp="fp-1", url="https://x.com/a",
+        host="x.com", depth=0, parent_url_fp=None, discovery_source="seed")
+    rows = tmp_metadata.fetch_all(
+        "SELECT frontier_state FROM url_record WHERE url_fp='fp-1'")
+    assert rows[0][0] == "pending"
+
+    tmp_metadata.mark_url_record_state(task_id=1, url_fp="fp-1", state="done")
+    rows = tmp_metadata.fetch_all(
+        "SELECT frontier_state FROM url_record WHERE url_fp='fp-1'")
+    assert rows[0][0] == "done"
+
+
+def test_list_pending_url_records_orders_by_depth(
+        tmp_metadata: SqliteMetadataStore) -> None:
+    """list_pending_url_records 按 depth 升序返回，过滤掉非 pending。"""
+    tmp_metadata.upsert_url_record(
+        task_id=1, url_fp="fp-D2", url="https://x.com/d2",
+        host="x.com", depth=2, parent_url_fp="fp-D1",
+        discovery_source="detail_to_interpret")
+    tmp_metadata.upsert_url_record(
+        task_id=1, url_fp="fp-D0", url="https://x.com/d0",
+        host="x.com", depth=0, parent_url_fp=None, discovery_source="list_page")
+    tmp_metadata.upsert_url_record(
+        task_id=1, url_fp="fp-D1", url="https://x.com/d1",
+        host="x.com", depth=1, parent_url_fp="fp-D0",
+        discovery_source="list_to_detail")
+    # 标 D0 done → 不应再返回
+    tmp_metadata.mark_url_record_state(task_id=1, url_fp="fp-D0", state="done")
+    # 跨 task 的不应混入
+    tmp_metadata.upsert_url_record(
+        task_id=2, url_fp="fp-X", url="https://y.com/x", host="y.com",
+        depth=0, parent_url_fp=None, discovery_source="list_page")
+
+    rows = tmp_metadata.list_pending_url_records(task_id=1)
+    assert [r["url_fp"] for r in rows] == ["fp-D1", "fp-D2"]
+    assert rows[0]["depth"] == 1
+    assert rows[0]["discovery_source"] == "list_to_detail"
+
+
+def test_has_url_records_for_task(tmp_metadata: SqliteMetadataStore) -> None:
+    assert tmp_metadata.has_url_records_for_task(task_id=1) is False
+    tmp_metadata.upsert_url_record(
+        task_id=1, url_fp="fp-1", url="https://x.com/a",
+        host="x.com", depth=0, parent_url_fp=None, discovery_source="seed")
+    assert tmp_metadata.has_url_records_for_task(task_id=1) is True
+    assert tmp_metadata.has_url_records_for_task(task_id=999) is False
+
+
 def test_blob_put_get(tmp_blobstore: LocalFsBlobStore) -> None:
     uri = tmp_blobstore.put("2026/04/28/a.html", b"<html>hi</html>", "text/html")
     assert uri.startswith("file://")
