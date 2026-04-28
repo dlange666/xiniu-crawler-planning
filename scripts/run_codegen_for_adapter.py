@@ -187,10 +187,11 @@ def invoke_opencode(worktree: Path, model: str, log_file: Path) -> int:
     with open(log_file, "w") as logf:
         proc = subprocess.Popen(
             [
-                "opencode", "run", "-m", model,
+                "opencode", "run",
+                "Execute the attached codegen pipeline for this single-host task.",
+                "-m", model,
                 "-f", "docs/codegen-pipeline.md",
                 "-f", ".codegen-prompt.md",
-                "Execute the attached codegen pipeline for this single-host task.",
             ],
             cwd=worktree,
             stdout=subprocess.PIPE,
