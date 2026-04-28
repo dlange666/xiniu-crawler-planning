@@ -62,6 +62,26 @@ xiniu-crawler/
 判定 "属于 infra 还是 domain" 的简单准则——这段逻辑能被另一个业务域原样
 复用吗？能则 `infra/`，否则 `domains/`。
 
+### 2.1 Capability × Spec × Plan 对照表
+
+按"能力域 → 由哪份 spec 定契约 → 由哪个 plan 实施 → 由哪些代码模块承载"
+横向看清整体。新增能力时，先在本表加一行（spec 必须先存在，plan 与代码可后续）。
+
+| 能力域 | 主 spec | 实施 plan | 代码落点 | 状态 |
+|---|---|---|---|---|
+| 政策业务规格 | `prod-spec/domain-gov-policy.md` | `plan-20260427-mvp-policy-crawler` (M1–M3) | `domains/gov_policy/` | MVP 实施 |
+| 数据模型 | `prod-spec/data-model.md` | 各 plan 中相关 task 共同实施 | `infra/storage/` 建表脚本 | MVP 实施 |
+| 限流 / 重试 / 反爬识别 / warm-up | `prod-spec/infra-fetch-policy.md` | `plan-20260427-mvp` T-103/104/105；`plan-20260428-codegen-bootstrap` T-216 | `infra/http/`、`infra/robots/`、`infra/frontier/` | MVP 实施 |
+| 韧性（增量 / checkpoint / 异常分级 / 心跳） | `prod-spec/infra-resilience.md` | 暂缓（TD-010/011/012） | `infra/checkpoint/`、`infra/version_guard/`（待建） | 暂缓 |
+| 部署 / 自建分发 | `prod-spec/infra-deployment.md` | 暂缓（TD-015） | `infra/dispatch/`（待建） | MVP 单进程；扩展期升级 |
+| 可观测（指标 / 告警 / 成本） | `prod-spec/infra-observability.md` | `deferred-plan.md`（plan-20260428-observability-bootstrap，TD-013） | `infra/observability/`、`infra/ai/budget.py`（待建） | 暂缓 |
+| 可视化看板 | `prod-spec/infra-visualization.md` | 暂缓（TD-014） | `infra/visualization/`（待建） | 暂缓 |
+| Codegen 平台 · adapter 输出契约 | `prod-spec/codegen-output-contract.md` | `plan-20260428-codegen-bootstrap` T-201/203/206 | `infra/agent/`、`infra/harness/`、`infra/adapter_registry/`（M3.5） | M3.5 实施 |
+| Codegen 平台 · 自动合并安全网 | `prod-spec/codegen-auto-merge.md` | `plan-20260428-codegen-bootstrap` T-202/207/212~215 | `infra/sandbox/`、`infra/scheduler/`、`infra/codegen/`（M3.5） | M3.5 实施 |
+
+> 暂缓能力的 spec 是已通过的设计契约，仅 plan 暂未启动。提升时把 plan 从
+> `deferred-plan.md` / TD-X 升到 `active/`。
+
 ## 3. 依赖规则
 
 ```

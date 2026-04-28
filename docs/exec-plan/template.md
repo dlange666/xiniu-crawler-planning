@@ -4,7 +4,7 @@
 
 ## 1. 元信息
 
-- **Plan ID**：`PLAN-YYYYMMDD-<slug>`
+- **Plan ID**：`plan-YYYYMMDD-<slug>`
 - **关联规格**：`docs/prod-spec/<spec-name>.md`
 - **状态**：`active | completed | suspended`
 - **负责角色**：`Planner`
@@ -15,9 +15,12 @@
 
 ## 3. 原子任务列表
 
-| 任务 ID | 标题 | 实现细节 | 验证方式（Evaluator） | 状态 |
-|---|---|---|---|---|
-| T-YYYYMMDD-101 | … | … | … | `pending` |
+| 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
+|---|---|---|---|---|---|
+| T-YYYYMMDD-101 | … | `<spec>.md §<n>` 或 `—` | … | … | `pending` |
+
+`spec_ref` 列填该任务实现/验证的 spec 章节。如任务为基础设施搭建（如
+`uv init`）或纯交付物（如评估报告），可填 `—`。多 spec 用逗号分隔。
 
 每个任务必须在 `docs/task/active/task-*.json` 中存在同名条目。
 

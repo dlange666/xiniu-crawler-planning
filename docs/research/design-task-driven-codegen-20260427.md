@@ -1,9 +1,17 @@
 # 任务驱动的代码生成爬虫系统 · 设计提案
 
-> 状态：**核心决策已落地**（2026-04-28）。架构与计划已同步。本文保留为
-> 设计底稿，正式 spec 待 M3.5 启动时落地为 `docs/prod-spec/codegen-platform.md`（T-20260428-209）。
+> ⚠️ **状态：已被取代（superseded）**。本提案于 2026-04-28 被批准并拆分到
+> 正式 spec：
 >
-> **已确认决策**：
+> - 适配器架构与 prompt 框架 → `docs/prod-spec/codegen-output-contract.md`
+> - 跳过人审安全网（tier / canary / 回滚 / 审计） → `docs/prod-spec/codegen-auto-merge.md`
+> - Task 模型 DDL → `docs/prod-spec/data-model.md` §4.1
+> - 限流分级启动 warm-up → `docs/prod-spec/infra-fetch-policy.md` §2.3
+>
+> 本文件保留为**设计沿革快照**，不再演进。当前真相以上述 spec 为准；
+> 完整章节迁移对照见文末"取代关系"节。
+
+> **已确认决策**（2026-04-28，已沉淀到上述 spec）：
 > 1. 路径：保守（M1–M3 手写沉淀模板，M3.5 起 codegen 接管）→ 已建 `plan-20260428-codegen-bootstrap`
 > 2. adapter 路径：`domains/<context>/adapters/<host>.py`（一层文件）
 > 3. Task API：**外部独立项目**；本仓库只做消费端（不建 `infra/task_api`、`infra/task_store`）
@@ -376,3 +384,34 @@ subprocess.run([
 5. **金丝雀策略**：N 次成功的 N 取多少？默认 7 天 + 100 条无错？
 6. **失败回退**：连续 K 次解析失败自动 disable adapter + 开 fix-task？K=?
 7. **OpenCode 模型默认值**：`anthropic/claude-sonnet-4-6` 是否合适？任务级是否允许覆盖？
+
+---
+
+## 取代关系（章节迁移对照）
+
+本提案于 2026-04-28 被批准后，内容拆分到正式 spec。下表是章节级对照。
+**遇到本文与 spec 不一致时，一律以 spec 为准**。
+
+| 本提案章节 | 已迁移到 |
+|---|---|
+| §1 双平面架构 | `docs/architecture.md` §1（双平面图）+ §2 目录结构 |
+| §2 infra vs domain 职责切分 | `docs/infra-overview.md` + `docs/domains-overview.md` |
+| §3 Task 模型 | `docs/prod-spec/data-model.md` §4.1（4 主表 + 3 子表 + 1 审计）；本文伪代码仅作概念示意 |
+| §4 任务状态机 | `docs/prod-spec/data-model.md` §4.1.2/4.1.3（status ENUM）+ `codegen-auto-merge.md` §4 canary 阶段扩展 |
+| §5 编码 agent 后端（OpenCode CLI） | `docs/prod-spec/codegen-output-contract.md` §6 + `docs/infra-overview.md` `agent/` 模块描述 |
+| §6 Codegen worker 流程 | `docs/prod-spec/codegen-output-contract.md` §5–§6 + `plan-20260428-codegen-bootstrap` T-204/205 |
+| §7 Verification Harness | `docs/prod-spec/codegen-output-contract.md` §5（最低门槛） + `codegen-auto-merge.md` §3（加压门槛） |
+| §8 Human Review Gate | `docs/prod-spec/codegen-auto-merge.md` §2（tier 分级，含 tier-3 永远人审） |
+| §9 Adapter Registry / 金丝雀 | `docs/infra-overview.md` "Codegen 平台模块"+ `codegen-auto-merge.md` §4 渐进 canary |
+| §10 关键风险 | 部分进入 `docs/exec-plan/tech-debt-tracker.md`（TD-016/017）；部分由 `codegen-auto-merge.md` §1 风险模型覆盖 |
+| §11 与 MVP 关系（保守路径） | `docs/exec-plan/active/roadmap-policy-crawler.md`（M0–M8）+ `plan-20260428-codegen-bootstrap`（M3.5） |
+| §12 改动清单 | 已全部执行（见 `docs/cleanup-log.md` 2026-04-28 多条记录） |
+| §13 待决策问题 | 已全部决议（见本文头部"已确认决策"列表） |
+
+新增的、不在本提案中的设计（**仅以 spec 为准**）：
+
+- **限流分级启动 warm-up**：`infra-fetch-policy.md` §2.3（提案后追加）
+- **心跳与卡死恢复**：`infra-resilience.md` §2.5（提案后追加）
+- **`SELECT ... FOR UPDATE SKIP LOCKED` 多实例竞争**：`infra-deployment.md` §3.4（提案后追加）
+- **Task 模型 4 表拆分**：原提案是单表 + 嵌套对象，data-model.md 重构为 4 主表 + 子表
+- **应用层增量 / crawl_mode / crawl_until**：`data-model.md` §4.1.1 + design 提案 §3 概念分层

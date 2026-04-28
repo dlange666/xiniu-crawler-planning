@@ -113,6 +113,8 @@ Plan ID（spec 内部使用的 ID 字符串）与文件名保持一致：`plan-2
 - 每份 spec 底部有 `## 修订历史` 表（rev / 日期 / 摘要 / 关联 PR）。
 - 任何 spec 的**实质性改动**（影响实现 / 契约 / 默认值 / 接口）必须同 PR 内：(a) 追加 `## 修订历史` 一行；(b) bump 顶部 rev 号与 `最近修订` 日期。breaking change 在摘要前加 **[breaking]** 前缀。
 - 纯排版、链接修复、错别字不算实质性改动，可不更修订历史。
+- **代码 PR 与 spec PR 的对齐**：实现 spec 改动的代码 PR 必须**同 PR 含 spec 修订**（不允许"先合 spec PR，再合 code PR"或反向）；这样 spec 与实现版本始终一致。例外：spec 变更仅文字润色 / 命名调整时，可独立 PR。
+- **取代关系**（superseded）：当一份 design 提案 / spec 被新 spec 取代时，旧文档顶部加 `> ⚠️ 状态：已被取代`，并在文末加"取代关系"对照表，指向继任 spec。继任 spec 的修订历史同步注明"取代自 X"。
 - 模板：`docs/prod-spec/template.md`。其它 docs 子目录模板：`docs/{exec-plan,task,eval-test}/template.md`。
 
 ### Docs, Data, and Runtime

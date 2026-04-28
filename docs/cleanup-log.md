@@ -5,6 +5,7 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-28 | SDD 视角加固 P0+P1+P2 | (P0-1) `design-task-driven-codegen` 顶部加 ⚠️ superseded banner + 文末加"取代关系"对照表；(P0-2) plan 任务表加 `spec_ref` 列（template + 3 份 plan：mvp / codegen-bootstrap / deferred-plan，共 33 个任务全部填充）；(P0-3) `eval-test/template.md` 加 `validates: <spec>.md §<n>` 行；(P1) `architecture.md` §2.1 新增 Capability × Spec × Plan × 代码落点 9 行对照表；(P2) AGENTS.md `Spec Versioning` 加 2 条硬规则：代码 PR 与 spec 修订同 PR；取代关系标注规范 | Planner |
 | 2026-04-28 | PRD 与 research 分离 | 新建 `docs/prd/`：产品/业务方原稿归档（`policy-graph-product-plan-20260427.md`、`policy-data-sources-phase1-20260427.md` 从 research 移过来）；`docs/research/index.md` 改写边界（仅工程视角研究/设计提案）；AGENTS.md Repository Map + Doc Naming Conventions + index.md 名单更新 | Cleaner |
 | 2026-04-28 | 暂缓 plan 收口 | 删除 `docs/exec-plan/deferred/` 子目录，内容合并为顶层 `deferred-plan.md`（章节式）；index.md 与 tech-debt-tracker 引用同步更新 | Cleaner |
 | 2026-04-28 | 文件名 lowercase 统一 | `PLAN-*` / `ROADMAP-*` 改 `plan-*` / `roadmap-*`（4 份文件重命名）；Plan ID 字符串同步小写；AGENTS.md `Doc Naming Conventions` 加"kebab-case + lowercase"强约束 | Cleaner |

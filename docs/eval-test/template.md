@@ -1,7 +1,8 @@
 # <评估标题>
 
 > **类型**：`acceptance-report | regression-check | adversarial-case | ad-hoc-comparison`
-> **关联**：Plan/Task ID（如 `PLAN-...` / `T-...`）
+> **关联**：Plan/Task ID（如 `plan-...` / `T-...`）
+> **验证 spec**：`validates: <spec>.md §<n>`（多个用逗号；纯交付物可填 `—`）
 > **作者**：Evaluator
 > **日期**：YYYY-MM-DD
 > **判定**：`green | red | partial`（partial 必须在 §6 写出阻塞项）
