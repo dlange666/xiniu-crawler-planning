@@ -6,12 +6,9 @@
 
 | 文件 | 角色 |
 |---|---|
-| `architecture.md` | 仓库级 high-level 架构（分层、目录、依赖、关键决策） |
+| `architecture.md` | 仓库级 high-level 架构：分层、目录、依赖、Capability × Spec × Plan 对照表、关键决策 |
 | `product-sense.md` | 产品方向、核心指标、不做什么 |
 | `cleanup-log.md` | 工作流维度的清理动作记录（追加式） |
-| `domains-overview.md` | 业务域目录"门牌"，规则与新增标准 |
-| `infra-overview.md` | 基础设施目录"门牌"，模块清单与共同遵守的契约 |
-| `domain-gov-policy-layout.md` | 政府产业政策业务域的子模块布局 |
 
 ## 子目录
 

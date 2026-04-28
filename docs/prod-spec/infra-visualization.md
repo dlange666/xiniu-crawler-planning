@@ -98,7 +98,7 @@
 
 ## 8. 与其它 spec 的接口
 
-- 数据来源：`infra-observability.md`（指标）、`infra-resilience.md`（checkpoint）、`domain-gov-policy-layout.md`（业务表）
+- 数据来源：`infra-observability.md`（指标）、`infra-resilience.md`（checkpoint）、`domain-gov-policy.md`（业务表）
 - 操作 API（暂停 / 重启）调用：`infra/checkpoint/` 提供的 `pause_task` / `resume_task`
 - 鉴权配置：与外部 task 项目无关；本仓库自管
 

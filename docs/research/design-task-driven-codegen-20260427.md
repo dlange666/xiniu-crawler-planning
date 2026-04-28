@@ -372,8 +372,8 @@ subprocess.run([
 - `docs/prod-spec/domain-gov-policy.md`：§8 加入 "harness_rules"、"golden/" 目录；新增 §10 描述 task spec 在本业务域下的字段要求与默认值。
 - `docs/exec-plan/active/plan-20260427-mvp-policy-crawler.md`：按选择的路径调整 M1–M3 任务，或新增 M3.5 子计划。
 - `docs/exec-plan/active/roadmap-policy-crawler.md`：插入 codegen 里程碑。
-- `docs/infra-overview.md`：补入 codegen 平台模块清单。
-- `docs/domains-overview.md`：说明 "domain 注入 harness_rules + golden + prompt + schema"，不持有调度/生成逻辑。
+- `docs/architecture.md` §2：补入 codegen 平台模块清单。
+- `docs/architecture.md` §2：说明 "domain 注入 harness_rules + golden + prompt + schema"，不持有调度/生成逻辑。
 
 ## 13. 待用户决策的问题
 
@@ -395,14 +395,14 @@ subprocess.run([
 | 本提案章节 | 已迁移到 |
 |---|---|
 | §1 双平面架构 | `docs/architecture.md` §1（双平面图）+ §2 目录结构 |
-| §2 infra vs domain 职责切分 | `docs/infra-overview.md` + `docs/domains-overview.md` |
+| §2 infra vs domain 职责切分 | `docs/architecture.md` §2 + `docs/architecture.md` §2 |
 | §3 Task 模型 | `docs/prod-spec/data-model.md` §4.1（4 主表 + 3 子表 + 1 审计）；本文伪代码仅作概念示意 |
 | §4 任务状态机 | `docs/prod-spec/data-model.md` §4.1.2/4.1.3（status ENUM）+ `codegen-auto-merge.md` §4 canary 阶段扩展 |
-| §5 编码 agent 后端（OpenCode CLI） | `docs/prod-spec/codegen-output-contract.md` §6 + `docs/infra-overview.md` `agent/` 模块描述 |
+| §5 编码 agent 后端（OpenCode CLI） | `docs/prod-spec/codegen-output-contract.md` §6 + `docs/architecture.md` §2 `agent/` 模块描述 |
 | §6 Codegen worker 流程 | `docs/prod-spec/codegen-output-contract.md` §5–§6 + `plan-20260428-codegen-bootstrap` T-204/205 |
 | §7 Verification Harness | `docs/prod-spec/codegen-output-contract.md` §5（最低门槛） + `codegen-auto-merge.md` §3（加压门槛） |
 | §8 Human Review Gate | `docs/prod-spec/codegen-auto-merge.md` §2（tier 分级，含 tier-3 永远人审） |
-| §9 Adapter Registry / 金丝雀 | `docs/infra-overview.md` "Codegen 平台模块"+ `codegen-auto-merge.md` §4 渐进 canary |
+| §9 Adapter Registry / 金丝雀 | `docs/architecture.md` §2 "Codegen 平台模块"+ `codegen-auto-merge.md` §4 渐进 canary |
 | §10 关键风险 | 部分进入 `docs/exec-plan/tech-debt-tracker.md`（TD-016/017）；部分由 `codegen-auto-merge.md` §1 风险模型覆盖 |
 | §11 与 MVP 关系（保守路径） | `docs/exec-plan/active/roadmap-policy-crawler.md`（M0–M8）+ `plan-20260428-codegen-bootstrap`（M3.5） |
 | §12 改动清单 | 已全部执行（见 `docs/cleanup-log.md` 2026-04-28 多条记录） |

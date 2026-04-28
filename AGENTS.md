@@ -13,9 +13,9 @@ Read this file before starting work. It is the repository control map.
 |---|---|
 | `CLAUDE.md`, `AGENTS.md`, `README.md` | 根控制文档与人类入口（项目级 `README.md` 是仓库唯一一份 README） |
 | `docs/index.md` | docs 根索引；指向各子目录与顶层文件 |
-| `docs/architecture.md`, `docs/product-sense.md` | 架构、产品方向（不含具体业务字段） |
-| `docs/domains-overview.md`, `docs/domain-gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
-| `docs/prod-spec/`（含 `index.md`） | 长期参考：产品与基础设施规格 |
+| `docs/architecture.md` | 架构（分层、目录、依赖、Capability × Spec × Plan 对照表） |
+| `docs/product-sense.md` | 产品方向、核心指标、不做什么 |
+| `docs/prod-spec/`（含 `index.md`） | 长期参考：产品与基础设施规格；spec 索引在 index.md |
 | `docs/prd/`（含 `index.md`） | 产品需求文档归档（来自产品/业务/合规方的原稿） |
 | `docs/research/`（含 `index.md`） | 工程视角研究底稿（设计提案、调研、技术对比） |
 | `docs/exec-plan/`（含 `index.md`），`docs/task/`，`docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、清理记录 |
