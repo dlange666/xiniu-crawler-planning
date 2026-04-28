@@ -11,12 +11,14 @@ Read this file before starting work. It is the repository control map.
 
 | Path | Purpose |
 |---|---|
-| `CLAUDE.md`, `AGENTS.md`, `README.md` | 根控制文档与人类入口 |
+| `CLAUDE.md`, `AGENTS.md`, `README.md` | 根控制文档与人类入口（项目级 `README.md` 是仓库唯一一份 README） |
+| `docs/index.md` | docs 根索引；指向各子目录与顶层文件 |
 | `docs/architecture.md`, `docs/product-sense.md` | 架构、产品方向（不含具体业务字段） |
-| `docs/domains-overview.md`, `docs/gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
-| `docs/exec-plan/`, `docs/task/`, `docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、清理记录 |
+| `docs/domains-overview.md`, `docs/domain-gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
+| `docs/prod-spec/`（含 `index.md`） | 长期参考：产品与基础设施规格 |
+| `docs/research/`（含 `index.md`） | 研究底稿（自由格式归档，不再演进） |
+| `docs/exec-plan/`（含 `index.md`），`docs/task/`，`docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、清理记录 |
 | `docs/eval-test/` | 评估证据与回放产物 |
-| `docs/prod-spec/`, `docs/research/` | 长期参考文档：产品规格与研究底稿（业务细节归此） |
 | `domains/<context>/` | bounded-context 业务代码 |
 | `infra/` | 跨上下文复用的技术能力，不承载业务规则 |
 | `scripts/` | 仓库级 CLI 入口 |
@@ -83,6 +85,24 @@ Read this file before starting work. It is the repository control map.
 - 其它 spec（如 `codegen-output-contract.md` / `infra-deployment.md`）描述设计动机与字段语义，**不再维护表 DDL**；如需 SQL 定义，引用 data-model.md 对应小节。
 - 新增表必须先在 owning spec 写设计动机，再到 data-model.md 落 DDL；两个 spec 的修订历史互相引用。
 - 尽量不使用 JSON 字段。仅在动态结构 / 一次性写入 / 不参与 SQL 检索三类场景才允许（详见 data-model.md §1.3）。
+
+### Doc Naming Conventions
+
+- 仓库根：`README.md` 仅一份（项目入口）。**子目录用 `index.md`** 作为目录索引，避免与根 README 冲突。
+- 文件名一律 **kebab-case + lowercase**（不含大写字母 / 下划线）。
+- 子目录前缀分组规则：
+
+| 目录 | 前缀分组 |
+|---|---|
+| `docs/prod-spec/` | `domain-<ctx>.md` / `infra-<topic>.md` / `codegen-<topic>.md` / 单名跨域基础（`data-model.md` / `template.md`） |
+| `docs/exec-plan/` | `plan-YYYYMMDD-<slug>.md` / `roadmap-<scope>.md` / 单名工具（`tech-debt-tracker.md` / `template.md`） |
+| `docs/research/` | `<type>-<slug>-YYYYMMDD.md`（type ∈ `research`/`design`/`policy`/...） |
+| `docs/` 根 | 描述性单名（`architecture.md` / `product-sense.md` / `cleanup-log.md`）；"门牌"型用 `<scope>-overview.md` 或 `domain-<ctx>-<role>.md` |
+| `skills/` | `crawler-workflow*` |
+
+每个有索引职责的目录必须有 `index.md`：当前 `docs/`、`docs/prod-spec/`、`docs/research/`、`docs/exec-plan/` 各一份。
+
+Plan ID（spec 内部使用的 ID 字符串）与文件名保持一致：`plan-20260427-mvp-policy-crawler`。
 
 ### Spec Versioning
 - spec 文件名**不带版本号**（用 `infra-fetch-policy.md` 而非 `infra-fetch-policy-v1.md`）。

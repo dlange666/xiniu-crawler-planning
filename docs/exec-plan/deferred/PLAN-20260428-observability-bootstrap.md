@@ -1,8 +1,8 @@
-# PLAN-20260428-observability-bootstrap
+# plan-20260428-observability-bootstrap
 
 ## 1. 元信息
 
-- **Plan ID**：`PLAN-20260428-OBSERVABILITY-BOOTSTRAP`
+- **Plan ID**：`plan-20260428-observability-bootstrap`
 - **关联规格**：`docs/prod-spec/infra-observability.md`（零自建后台版）、`docs/prod-spec/infra-resilience.md`
 - **状态**：`deferred`（不进入 MVP；MVP 跑稳后由 Planner 决定何时提升）。登记 TD-013
 - **里程碑**：M-Observability（≈1.5 周）

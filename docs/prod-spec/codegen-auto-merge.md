@@ -1,7 +1,7 @@
 # 自动合并策略 · 跳过人审的安全网
 
 > **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
-> **实施状态**：M3.5 codegen-bootstrap 阶段实施（关联 PLAN-20260428-codegen-bootstrap，
+> **实施状态**：M3.5 codegen-bootstrap 阶段实施（关联 plan-20260428-codegen-bootstrap，
 > 新增 T-212~216）
 
 > 本 spec 定义**跳过人审环节**时的多层防御：分级范围闸口（L1）、Harness

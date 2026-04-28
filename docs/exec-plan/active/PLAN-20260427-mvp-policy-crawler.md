@@ -1,9 +1,9 @@
-# PLAN-20260427-mvp-policy-crawler
+# plan-20260427-mvp-policy-crawler
 
 ## 1. 元信息
 
-- **Plan ID**：`PLAN-20260427-MVP-POLICY-CRAWLER`
-- **关联规格**：`docs/prod-spec/policy-graph.md`
+- **Plan ID**：`plan-20260427-mvp-policy-crawler`
+- **关联规格**：`docs/prod-spec/domain-gov-policy.md`
 - **关联研究**：`docs/research/research-ai-first-crawler-system-20260427.md`、`docs/research/policy-graph-product-plan-20260427.md`、`docs/research/policy-data-sources-phase1-20260427.md`
 - **状态**：`active`
 - **负责角色**：`Planner`
@@ -68,5 +68,5 @@
 
 - 第 3 节 13 个任务全部 `completed`
 - T-113 工件已存在且 Evaluator 签字 `green`
-- `docs/prod-spec/policy-graph.md` §7 中第 1/3/4/5 行指标在 MVP 抽样下达标
+- `docs/prod-spec/domain-gov-policy.md` §7 中第 1/3/4/5 行指标在 MVP 抽样下达标
 - 本文件移到 `docs/exec-plan/archive/2026-W18/`（按合入周）

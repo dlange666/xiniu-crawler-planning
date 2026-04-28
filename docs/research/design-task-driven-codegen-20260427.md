@@ -4,7 +4,7 @@
 > 设计底稿，正式 spec 待 M3.5 启动时落地为 `docs/prod-spec/codegen-platform.md`（T-20260428-209）。
 >
 > **已确认决策**：
-> 1. 路径：保守（M1–M3 手写沉淀模板，M3.5 起 codegen 接管）→ 已建 `PLAN-20260428-codegen-bootstrap`
+> 1. 路径：保守（M1–M3 手写沉淀模板，M3.5 起 codegen 接管）→ 已建 `plan-20260428-codegen-bootstrap`
 > 2. adapter 路径：`domains/<context>/adapters/<host>.py`（一层文件）
 > 3. Task API：**外部独立项目**；本仓库只做消费端（不建 `infra/task_api`、`infra/task_store`）
 > 4. task 类型：`create` / `update` / `extend` 三种都做
@@ -361,9 +361,9 @@ subprocess.run([
 只有用户拍板后才动：
 
 - `docs/architecture.md`：第 1 节"分层"扩为"双平面"；第 2 节目录结构补 `infra/{task_api,task_store,codegen,agent,sandbox,harness,adapter_registry,scheduler}`；第 3 节依赖规则加 "agent 只能写沙箱白名单路径"；第 4 节关键决策加 "默认编码 agent = OpenCode CLI"。
-- `docs/prod-spec/policy-graph.md`：§8 加入 "harness_rules"、"golden/" 目录；新增 §10 描述 task spec 在本业务域下的字段要求与默认值。
-- `docs/exec-plan/active/PLAN-20260427-mvp-policy-crawler.md`：按选择的路径调整 M1–M3 任务，或新增 M3.5 子计划。
-- `docs/exec-plan/active/ROADMAP-policy-crawler.md`：插入 codegen 里程碑。
+- `docs/prod-spec/domain-gov-policy.md`：§8 加入 "harness_rules"、"golden/" 目录；新增 §10 描述 task spec 在本业务域下的字段要求与默认值。
+- `docs/exec-plan/active/plan-20260427-mvp-policy-crawler.md`：按选择的路径调整 M1–M3 任务，或新增 M3.5 子计划。
+- `docs/exec-plan/active/roadmap-policy-crawler.md`：插入 codegen 里程碑。
 - `docs/infra-overview.md`：补入 codegen 平台模块清单。
 - `docs/domains-overview.md`：说明 "domain 注入 harness_rules + golden + prompt + schema"，不持有调度/生成逻辑。
 

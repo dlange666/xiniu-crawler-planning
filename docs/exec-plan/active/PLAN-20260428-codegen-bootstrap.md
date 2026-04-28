@@ -1,10 +1,10 @@
-# PLAN-20260428-codegen-bootstrap
+# plan-20260428-codegen-bootstrap
 
 ## 1. 元信息
 
-- **Plan ID**：`PLAN-20260428-CODEGEN-BOOTSTRAP`
+- **Plan ID**：`plan-20260428-codegen-bootstrap`
 - **关联规格**：`docs/research/design-task-driven-codegen-20260427.md`（提案）+ 后续转入 `docs/prod-spec/codegen-platform.md`（M3.5 启动时落地）
-- **状态**：`active`（依赖 `PLAN-20260427-MVP-POLICY-CRAWLER` 关闭后启动）
+- **状态**：`active`（依赖 `plan-20260427-mvp-policy-crawler` 关闭后启动）
 - **负责角色**：`Planner`
 - **里程碑**：M3.5（≈3 周）
 

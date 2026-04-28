@@ -1,7 +1,7 @@
 # Codegen 输出契约 · 适配器结构 / Sink Schema / Harness 门槛 / Prompt 框架
 
 > **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
-> **实施状态**：M3.5 codegen-bootstrap 实施（关联 PLAN-20260428-codegen-bootstrap）
+> **实施状态**：M3.5 codegen-bootstrap 实施（关联 plan-20260428-codegen-bootstrap）
 
 > 本 spec 规定 codegen 平台（OpenCode CLI 等编码 agent）产出的适配器代码
 > 必须遵守的：内部架构、配套产物、默认 sink schema、harness 最低门槛、

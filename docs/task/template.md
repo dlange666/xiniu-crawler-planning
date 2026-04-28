@@ -33,7 +33,7 @@
       "id": "T-20260427-101",
       "title": "[infra/http] 带 Retry-After 与抖动的基础 HTTP 客户端",
       "status": "pending",
-      "plan_id": "PLAN-20260427-MVP-POLICY-CRAWLER",
+      "plan_id": "plan-20260427-mvp-policy-crawler",
       "dependency": [],
       "assignee": "generator",
       "last_updated": "2026-04-27T00:00:00Z",

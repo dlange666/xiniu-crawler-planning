@@ -3,7 +3,7 @@
 **业务域：政府产业政策**
 
 聚焦中央行政机关、国务院部委、31 省市自治区政府门户发布的产业政策。规格
-见 `docs/prod-spec/policy-graph.md`。
+见 `docs/prod-spec/domain-gov-policy.md`。
 
 ## 子模块布局
 

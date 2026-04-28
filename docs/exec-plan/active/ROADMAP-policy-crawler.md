@@ -1,6 +1,6 @@
 # 政策爬虫总路线图
 
-> 本文是**长期路线图视图**。当前活跃计划是 `PLAN-20260427-mvp-policy-crawler.md`
+> 本文是**长期路线图视图**。当前活跃计划是 `plan-20260427-mvp-policy-crawler.md`
 > （MVP / M0–M3）。M4 起的子计划在前一阶段关闭时再创建。
 
 对应研究报告 `docs/research/research-ai-first-crawler-system-20260427.md` §7

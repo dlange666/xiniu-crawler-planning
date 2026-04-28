@@ -5,7 +5,7 @@
 ## 命名约定
 
 - **kebab-case**，**不带版本号**（版本走 frontmatter + `## 修订历史`）
-- 业务 spec：`<domain>.md`（如 `policy-graph.md`）
+- 业务 spec：`<domain>.md`（如 `domain-gov-policy.md`）
 - 跨域基础：单名（如 `data-model.md`、`template.md`）
 - Infra 模块：`infra-<topic>.md`
 - Codegen 平台：`codegen-<topic>.md`
@@ -20,7 +20,7 @@
 | `data-model.md` | 21 张表的 DDL 与索引，唯一权威源 | MVP 必须实现 |
 | `template.md` | 新建 spec 的模板 | — |
 | **业务规格** | | |
-| `policy-graph.md` | 政府产业政策业务规格（采集范围 / 6 类数据 / 36 字段 / 验收） | MVP 实施 |
+| `domain-gov-policy.md` | 政府产业政策业务规格（采集范围 / 6 类数据 / 36 字段 / 验收） | MVP 实施 |
 | **Infra · 采集运行时** | | |
 | `infra-fetch-policy.md` | 限流 / 重试 / robots / 反爬识别 / 紧急止损 / warm-up | MVP 必须实现 |
 | `infra-resilience.md` | 增量抓取 / checkpoint / 异常分级 / 心跳 / 版本巡检 | MVP 暂缓（TD-010~012） |
@@ -36,8 +36,8 @@
 ## 跨 spec 关系（速查）
 
 ```
-policy-graph ──→ data-model（业务表）
-              └→ codegen-output-contract（业务侧 harness_rules / golden / prompt）
+domain-gov-policy ──→ data-model（业务表）
+                   └→ codegen-output-contract（业务侧 harness_rules / golden / prompt）
 
 codegen-output-contract ─→ codegen-auto-merge（tier 与 canary 触发条件）
                          └→ data-model（crawl_raw 等）
