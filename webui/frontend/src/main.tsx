@@ -4,7 +4,6 @@ import {
   App as AntApp,
   Button,
   ConfigProvider,
-  Descriptions,
   Empty,
   Flex,
   Space,
@@ -14,8 +13,10 @@ import {
   theme,
 } from 'antd';
 import {
+  ArrowRightOutlined,
   AppstoreOutlined,
   BarChartOutlined,
+  CheckCircleOutlined,
   DatabaseOutlined,
   LinkOutlined,
   ReloadOutlined,
@@ -141,6 +142,25 @@ function StatusTag({ value }: { value: string }) {
   return <Tag color={color}>{value}</Tag>;
 }
 
+function compactUrl(value: string): string {
+  try {
+    const parsed = new URL(value);
+    const path = `${parsed.pathname}${parsed.search}`;
+    return `${parsed.host}${path}`;
+  } catch {
+    return value;
+  }
+}
+
+function MetricCell({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="metric-cell">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
@@ -192,16 +212,74 @@ function TasksPage() {
           {
             title: 'Task',
             dataIndex: 'task_id',
-            width: 90,
-            render: (_, row) => <Button type="link" onClick={() => navigate(`/tasks/${row.task_id}`)}>#{row.task_id}</Button>,
+            width: 154,
+            render: (_, row) => (
+              <Space direction="vertical" size={2} className="task-id-cell">
+                <Button
+                  type="link"
+                  className="inline-link strong-link"
+                  onClick={() => navigate(`/tasks/${row.task_id}`)}
+                >
+                  #{row.task_id}
+                </Button>
+                <Typography.Text type="secondary" className="cell-sub">
+                  {row.created_at?.slice(0, 10)}
+                </Typography.Text>
+              </Space>
+            ),
           },
-          { title: 'Host', dataIndex: 'host', ellipsis: true },
-          { title: 'Context', dataIndex: 'business_context', width: 140 },
-          { title: 'Status', dataIndex: 'status', width: 130, render: (_, row) => <StatusTag value={row.status} /> },
-          { title: 'URLs', dataIndex: 'url_count', width: 110 },
-          { title: 'Raw', dataIndex: 'raw_count', width: 90 },
-          { title: 'Created by', dataIndex: 'created_by', width: 160 },
+          {
+            title: 'Source',
+            dataIndex: 'host',
+            ellipsis: true,
+            render: (_, row) => (
+              <Space direction="vertical" size={2} className="source-cell">
+                <Typography.Text strong>{row.host}</Typography.Text>
+                <Typography.Text type="secondary" className="mono cell-sub" ellipsis>
+                  {compactUrl(row.site_url)}
+                </Typography.Text>
+              </Space>
+            ),
+          },
+          {
+            title: 'Context',
+            dataIndex: 'business_context',
+            width: 138,
+            render: (_, row) => (
+              <Space direction="vertical" size={2}>
+                <Typography.Text>{row.business_context}</Typography.Text>
+                <Typography.Text type="secondary" className="cell-sub">
+                  {row.data_kind} / {row.crawl_mode}
+                </Typography.Text>
+              </Space>
+            ),
+          },
+          {
+            title: 'Status',
+            dataIndex: 'status',
+            width: 124,
+            render: (_, row) => <StatusTag value={row.status} />,
+          },
+          {
+            title: 'Volume',
+            width: 210,
+            render: (_, row) => (
+              <div className="metric-strip">
+                <MetricCell label="URLs" value={row.url_count} />
+                <MetricCell label="Fetch" value={row.fetch_count} />
+                <MetricCell label="Raw" value={row.raw_count} />
+              </div>
+            ),
+          },
+          {
+            title: 'Created by',
+            dataIndex: 'created_by',
+            width: 160,
+            ellipsis: true,
+          },
         ]}
+        tableLayout="fixed"
+        scroll={{ x: 1020 }}
       />
     </PageContainer>
   );
@@ -261,16 +339,35 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
   const collectedTotal = progress.raw || 0;
   const uncollectedTotal = Math.max(detail.url_total - collectedTotal, 0);
   const renderUrl = (row: UrlRecord) => (
-    <Space direction="vertical" size={0}>
-      <Typography.Text>{row.url}</Typography.Text>
-      <Typography.Text type="secondary" className="mono">{row.url_fp}</Typography.Text>
+    <Space direction="vertical" size={3} className="url-cell">
+      {row.raw_title ? (
+        <Button
+          type="link"
+          className="inline-link url-title-link"
+          onClick={() => navigate(`/tasks/${taskId}/items/${row.raw_id}`)}
+        >
+          {row.raw_title}
+        </Button>
+      ) : (
+        <Typography.Text strong>未入库 URL</Typography.Text>
+      )}
+      <Typography.Text className="mono url-path" type="secondary" copyable={{ text: row.url }}>
+        {compactUrl(row.url)}
+      </Typography.Text>
+      <Typography.Text type="secondary" className="mono cell-sub">
+        fp {row.url_fp}
+      </Typography.Text>
     </Space>
   );
   const renderContent = (row: UrlRecord) => {
     if (row.raw_id) {
       return (
-        <Button type="link" className="inline-link" onClick={() => navigate(`/tasks/${taskId}/items/${row.raw_id}`)}>
-          查看采集详情
+        <Button
+          icon={<ArrowRightOutlined />}
+          size="small"
+          onClick={() => navigate(`/tasks/${taskId}/items/${row.raw_id}`)}
+        >
+          详情
         </Button>
       );
     }
@@ -295,13 +392,13 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
 
       <ProCard split="vertical" gutter={12} className="compact-card" bodyStyle={{ padding: 0 }}>
         <ProCard title="Source 参数" colSpan="42%">
-          <Descriptions column={1} size="small">
-            <Descriptions.Item label="Site URL">{task.site_url}</Descriptions.Item>
-            <Descriptions.Item label="Data kind">{task.data_kind}</Descriptions.Item>
-            <Descriptions.Item label="Crawl mode">{task.crawl_mode}</Descriptions.Item>
-            <Descriptions.Item label="Scope">{task.scope_mode}</Descriptions.Item>
-            <Descriptions.Item label="RPS">{task.politeness_rps}</Descriptions.Item>
-          </Descriptions>
+          <div className="field-grid">
+            <div><span>Site URL</span><Typography.Text copyable className="mono">{compactUrl(task.site_url)}</Typography.Text></div>
+            <div><span>Data kind</span><strong>{task.data_kind}</strong></div>
+            <div><span>Crawl mode</span><strong>{task.crawl_mode}</strong></div>
+            <div><span>Scope</span><strong>{task.scope_mode}</strong></div>
+            <div><span>RPS</span><strong>{task.politeness_rps}</strong></div>
+          </div>
         </ProCard>
         <ProCard title="Depth 分布">
           <Flex wrap="wrap" gap={8}>
@@ -352,26 +449,30 @@ function TaskDetailPage({ taskId }: { taskId: number }) {
             onChange: (page, pageSize) => void loadUrls(page, pageSize),
           }}
           columns={[
-            { title: 'Depth', dataIndex: 'depth', width: 74 },
+            { title: 'Depth', dataIndex: 'depth', width: 76 },
             {
-              title: 'URL',
+              title: 'Content / URL',
               dataIndex: 'url',
               ellipsis: true,
               render: (_, row) => renderUrl(row),
             },
-            { title: 'State', dataIndex: 'frontier_state', width: 110, render: (_, row) => <StatusTag value={row.frontier_state} /> },
-            { title: 'Source', dataIndex: 'discovery_source', width: 140 },
+            { title: 'State', dataIndex: 'frontier_state', width: 104, render: (_, row) => <StatusTag value={row.frontier_state} /> },
+            { title: 'Source', dataIndex: 'discovery_source', width: 132, ellipsis: true },
             {
               title: 'Fetch',
-              width: 120,
-              render: (_, row) => row.status_code ? `HTTP ${row.status_code}` : (row.error_kind || '—'),
+              width: 116,
+              render: (_, row) => row.status_code
+                ? <Tag icon={<CheckCircleOutlined />} color="green">HTTP {row.status_code}</Tag>
+                : (row.error_kind || '—'),
             },
             {
-              title: '内容',
-              width: 300,
+              title: 'Action',
+              width: 112,
               render: (_, row) => renderContent(row),
             },
           ]}
+          tableLayout="fixed"
+          scroll={{ x: 1120 }}
         />
       </ProCard>
     </PageContainer>
@@ -420,13 +521,17 @@ function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
             <div className="storage-info-row">
               <div className="storage-info-label">源 URL</div>
               <div className="storage-info-value">
-              <Typography.Text copyable>{item.url}</Typography.Text>
+                <Typography.Text copyable={{ text: item.url }} className="mono breakable-value">
+                  {compactUrl(item.url)}
+                </Typography.Text>
               </div>
             </div>
             <div className="storage-info-row">
               <div className="storage-info-label">Raw blob</div>
               <div className="storage-info-value">
-              <Typography.Text copyable>{item.raw_blob_uri}</Typography.Text>
+                <Typography.Text copyable className="mono breakable-value">
+                  {item.raw_blob_uri}
+                </Typography.Text>
               </div>
             </div>
             <div className="storage-info-row">
@@ -436,24 +541,29 @@ function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
             <div className="storage-info-row">
               <div className="storage-info-label">Attachments</div>
               <div className="storage-info-value">
-              <Space direction="vertical" size={6} className="attachment-list">
-                <Typography.Text>{item.attachments?.length || 0}</Typography.Text>
-                {childLinks.map((row) => (
-                  <div className="attachment-list-item" key={row.url}>
-                    <Space size={6} align="start">
-                      {renderChildLinkType(row)}
-                      <Space direction="vertical" size={0}>
-                        <Typography.Link href={row.url} target="_blank" rel="noreferrer" strong={row.link_type === 'attachment'}>
-                          {row.filename || row.url}
-                        </Typography.Link>
-                        <Typography.Text type="secondary" copyable>
-                          {row.url}
-                        </Typography.Text>
+                <Space direction="vertical" size={6} className="attachment-list">
+                  <Typography.Text>{item.attachments?.length || 0}</Typography.Text>
+                  {childLinks.map((row) => (
+                    <div className="attachment-list-item" key={row.url}>
+                      <Space size={8} align="start">
+                        {renderChildLinkType(row)}
+                        <Space direction="vertical" size={2} className="child-link-text">
+                          <Typography.Link
+                            href={row.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            strong={row.link_type === 'attachment'}
+                          >
+                            {row.filename || compactUrl(row.url)}
+                          </Typography.Link>
+                          <Typography.Text type="secondary" copyable={{ text: row.url }} className="mono child-url">
+                            {compactUrl(row.url)}
+                          </Typography.Text>
+                        </Space>
                       </Space>
-                    </Space>
-                  </div>
-                ))}
-              </Space>
+                    </div>
+                  ))}
+                </Space>
               </div>
             </div>
           </div>
@@ -462,13 +572,14 @@ function TaskItemPage({ taskId, itemId }: { taskId: number; itemId: number }) {
 
       <ProCard title="Source metadata" className="compact-card">
         {metadataEntries.length ? (
-          <Descriptions column={2} size="small">
+          <div className="metadata-grid">
             {metadataEntries.map(([key, value]) => (
-              <Descriptions.Item label={key} key={key}>
-                {String(value)}
-              </Descriptions.Item>
+              <div className="metadata-row" key={key}>
+                <span>{key}</span>
+                <strong>{String(value)}</strong>
+              </div>
             ))}
-          </Descriptions>
+          </div>
         ) : (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 source metadata" />
         )}
