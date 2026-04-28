@@ -5,6 +5,7 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-28 | 删 exec-plan/completed/ legacy 空目录 | 该目录是从 investment-analyzer 模板继承下来的兼容层，新 plan 走 archive/YYYY-Www/。删除目录；index.md 同步去掉相关说明 | Cleaner |
 | 2026-04-28 | 删除冗余 docs/index.md | 内容已被 AGENTS.md Repository Map / Doc Naming Conventions + 根 README.md "Start Here" 覆盖；docs 根目录不需要二级索引。子目录 index.md 保留 | Cleaner |
 | 2026-04-28 | 删除冗余"门牌"文件 | 删 `docs/domains-overview.md` / `docs/domain-gov-policy-layout.md` / `docs/infra-overview.md`：内容已被 `architecture.md`（§2 目录结构 + §2.1 Capability×Spec×Plan）+ `prod-spec/index.md` + `prod-spec/domain-gov-policy.md` §8 完整覆盖；AGENTS.md / README.md / docs/index.md / 受影响 spec 与 plan / design 提案的引用同步更新 | Cleaner |
 | 2026-04-28 | SDD 视角加固 P0+P1+P2 | (P0-1) `design-task-driven-codegen` 顶部加 ⚠️ superseded banner + 文末加"取代关系"对照表；(P0-2) plan 任务表加 `spec_ref` 列（template + 3 份 plan：mvp / codegen-bootstrap / deferred-plan，共 33 个任务全部填充）；(P0-3) `eval-test/template.md` 加 `validates: <spec>.md §<n>` 行；(P1) `architecture.md` §2.1 新增 Capability × Spec × Plan × 代码落点 9 行对照表；(P2) AGENTS.md `Spec Versioning` 加 2 条硬规则：代码 PR 与 spec 修订同 PR；取代关系标注规范 | Planner |

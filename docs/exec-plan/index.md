@@ -11,8 +11,7 @@ docs/exec-plan/
 ├── tech-debt-tracker.md      技术债登记表（轻量行级）
 ├── deferred-plan.md          已详尽设计但暂缓实施的 plan（章节式）
 ├── active/                   当前在做的 plan、ROADMAP             (扫描入口)
-├── archive/                  已完结的 plan，按 ISO 周归档：archive/YYYY-Www/  (扫描入口)
-└── completed/                历史遗留兼容；新 plan 不进这里                   (legacy)
+└── archive/                  已完结的 plan，按 ISO 周归档：archive/YYYY-Www/  (扫描入口)
 ```
 
 ## 流转
