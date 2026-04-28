@@ -98,13 +98,13 @@
     {
       "id": "T-20260428-509",
       "title": "[写 eval] codegen-most-20260428.md",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260428-codegen-most",
       "spec_ref": "codegen-pipeline.md §4.6",
       "dependency": ["T-20260428-508"],
       "assignee": "generator",
       "last_updated": "2026-04-28T15:45:00Z",
-      "notes": "eval 已写入 green 证据；PR 创建后可关闭任务线。"
+      "notes": "eval 已写入 green 证据；draft PR #4 已创建：https://github.com/dlange666/xiniu-crawler-planning/pull/4。"
     }
   ]
 }

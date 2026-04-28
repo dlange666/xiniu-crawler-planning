@@ -103,6 +103,8 @@ hosts:   1  ({'www.most.gov.cn': 14})
 
 ## 7. PR handoff
 
+Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/4
+
 建议 PR 标题：
 
 ```text
@@ -135,7 +137,7 @@ feature(most): add codegen adapter
 
 ```text
 codegen most green
-PR: pending
+PR: https://github.com/dlange666/xiniu-crawler-planning/pull/4
 Eval: docs/eval-test/codegen-most-20260428.md
 Key metrics: raw_records=14, errors=0, audit=pass
 Next: review draft PR, then merge after owner approval

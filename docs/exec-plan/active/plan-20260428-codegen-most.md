@@ -1,6 +1,6 @@
 # Plan: codegen-most (www.most.gov.cn)
 
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：verifying
+> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：completed
 
 ## 关联 spec
 
@@ -36,7 +36,7 @@
 | T-20260428-506 | 实现 test：`test_adapter_most.py` | MOST 专项测试 10/10 通过 | completed |
 | T-20260428-507 | Live smoke：`run_crawl_task.py --max-pages 30` | `raw_records_written=14`，`errors=0`，`anti_bot_events=0` | completed |
 | T-20260428-508 | Audit：`audit_crawl_quality.py` | `title_rate=100%`，`body_500_rate=85.7%`，`metadata_rate=100%` | completed |
-| T-20260428-509 | 写 eval 与 PR handoff | `docs/eval-test/codegen-most-20260428.md` 记录 green 证据；PR 待创建 | verifying |
+| T-20260428-509 | 写 eval 与 PR handoff | `docs/eval-test/codegen-most-20260428.md` 记录 green 证据；draft PR #4 已创建 | completed |
 
 ## 边界护栏
 
@@ -52,5 +52,6 @@
 | `uv run pytest tests/gov_policy/test_adapter_most.py -q` | pass：10 passed |
 | live smoke | pass：14 raw records，0 errors |
 | audit | pass：quality audit verdict PASS |
+| draft PR | https://github.com/dlange666/xiniu-crawler-planning/pull/4 |
 
 最终完整 gates 见 `docs/eval-test/codegen-most-20260428.md`。
