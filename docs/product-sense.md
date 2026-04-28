@@ -27,5 +27,5 @@
 
 - 不做绕过验证码/登录/付费墙/技术 challenge 的能力
 - 不做新闻聚合站的全网络爬取（仅限官方机关与协会）
-- 第一阶段不做用户侧前端（前端形态在 `docs/research/policy-graph-product-plan-20260427.md` 中由产品同学规划）
+- 第一阶段不做用户侧前端（前端形态在 `docs/prd/policy-graph-product-plan-20260427.md` 中由产品同学规划）
 - 第一阶段不做基于 simhash 的相似政策自动合并

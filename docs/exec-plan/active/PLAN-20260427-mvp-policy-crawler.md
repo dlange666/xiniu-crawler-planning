@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260427-mvp-policy-crawler`
 - **关联规格**：`docs/prod-spec/domain-gov-policy.md`
-- **关联研究**：`docs/research/research-ai-first-crawler-system-20260427.md`、`docs/research/policy-graph-product-plan-20260427.md`、`docs/research/policy-data-sources-phase1-20260427.md`
+- **关联研究**：`docs/research/research-ai-first-crawler-system-20260427.md`、`docs/prd/policy-graph-product-plan-20260427.md`、`docs/prd/policy-data-sources-phase1-20260427.md`
 - **状态**：`active`
 - **负责角色**：`Planner`
 

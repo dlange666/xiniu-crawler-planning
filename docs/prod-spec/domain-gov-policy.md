@@ -3,7 +3,7 @@
 
 
 > 本文件是爬虫仓库视角的**业务规格**。完整产品策划请见
-> `docs/research/policy-graph-product-plan-20260427.md`。本文件只描述爬虫
+> `docs/prd/policy-graph-product-plan-20260427.md`。本文件只描述爬虫
 > 仓库需要交付的部分：采集对象、采集层级、字段定义、验收门槛。
 
 ## 1. 业务目标
@@ -21,10 +21,10 @@
 | 中央行政机关 | 国务院政策文件库 + 国务院要闻 | 政策、政策解读、规章、新闻要闻 |
 | 国务院部委 | 国家发改委、工信部、财政部、国家金融监督管理总局、证监会、国资委、人民银行、其他 | 8 类，按各部委导航分类逐一爬取 |
 | 地方行政机关 | 31 省市自治区政府门户的"信息公开 + 要闻 + 政策解读"三类入口 | 共约 90 个 URL |
-| 金融交易所、行业协会 | 见 `docs/research/policy-data-sources-phase1-20260427.md` 详细清单 | 第一阶段后期补齐 |
+| 金融交易所、行业协会 | 见 `docs/prd/policy-data-sources-phase1-20260427.md` 详细清单 | 第一阶段后期补齐 |
 
 完整 URL 清单与可爬取元数据列表见研究底稿
-`docs/research/policy-data-sources-phase1-20260427.md`。
+`docs/prd/policy-data-sources-phase1-20260427.md`。
 
 ## 3. 数据形态
 
@@ -51,7 +51,7 @@
 
 ## 5. 标签 36 字段（AI 结构化输出）
 
-完整 prompt 与字段说明见 `docs/research/policy-graph-product-plan-20260427.md`
+完整 prompt 与字段说明见 `docs/prd/policy-graph-product-plan-20260427.md`
 §3.1.2。本规格只列字段名与类型，作为入库 schema 与验收依据。
 
 ### 5.1 元数据字段（15 个）

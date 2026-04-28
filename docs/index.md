@@ -18,8 +18,9 @@
 | 目录 | 类型 | 职责 | 索引 |
 |---|---|---|---|
 | `prod-spec/` | long-lived | 产品与基础设施规格（11 份 spec + 模板） | `prod-spec/index.md` |
-| `research/` | long-lived | 研究底稿（设计提案、产品策划、数据源调研） | `research/index.md` |
-| `exec-plan/` | workflow | 执行计划与路线图（active / deferred / archive） | `exec-plan/index.md` |
+| `prd/` | long-lived | 产品需求文档归档（产品/业务/合规方原稿） | `prd/index.md` |
+| `research/` | long-lived | 工程视角研究底稿（调研、设计提案） | `research/index.md` |
+| `exec-plan/` | workflow | 执行计划与路线图（active / archive；暂缓走 `deferred-plan.md`） | `exec-plan/index.md` |
 | `task/` | workflow | 每个 PR 的任务状态文件（active / completed / archive） | 直接扫描 |
 | `eval-test/` | artifact | 评估证据与回放工件 | `eval-test/template.md` |
 

@@ -25,7 +25,8 @@
 - `docs/prod-spec/codegen-auto-merge.md` —— 自动合并策略：tier 分级 + 渐进 canary + 自动回滚 + 限流 warm-up
 - `docs/prod-spec/data-model.md` —— **所有表 DDL 与索引的唯一权威源**（21 张表）
 - `docs/exec-plan/active/` —— 当前执行计划（MVP + codegen-bootstrap + ROADMAP）
-- `docs/research/` —— 研究底稿（AI-First 总体架构、政策图谱策划、数据源、codegen 设计提案）
+- `docs/prd/` —— 产品需求文档归档（产品/业务方原稿）
+- `docs/research/` —— 工程视角研究底稿（AI-First 总体架构、codegen 设计提案）
 
 ## Repository Layout
 

@@ -51,10 +51,12 @@ description: 当任务属于 xiniu-crawler 仓库主交付环路时使用。本 
 
 - 任何 `docs/prod-spec/*.md` 实质性改动必须同 PR 追加 `## 修订历史` 并 bump frontmatter rev/日期（详见入口 skill `crawler-workflow` 的"Spec 编辑前置检查"）。
 - 新建 docs 文档必须从对应模板起手：
-  - `docs/exec-plan/template.md`
-  - `docs/task/template.md`
-  - `docs/prod-spec/template.md`
-  - `docs/eval-test/template.md`
+  - `docs/exec-plan/template.md`（plan / roadmap）
+  - `docs/task/template.md`（task 状态文件）
+  - `docs/prod-spec/template.md`（spec）
+  - `docs/eval-test/template.md`（评估工件）
+- 新归档来自外部的需求文档（产品/业务/合规方 docx）→ 放 `docs/prd/`，无强制模板，但需更新 `docs/prd/index.md`。
+- 新写工程视角的研究/设计提案 → 放 `docs/research/`，无强制模板，但需更新 `docs/research/index.md`。
 
 ## 完成标准
 

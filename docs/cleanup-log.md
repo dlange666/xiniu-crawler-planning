@@ -5,6 +5,7 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-28 | PRD 与 research 分离 | 新建 `docs/prd/`：产品/业务方原稿归档（`policy-graph-product-plan-20260427.md`、`policy-data-sources-phase1-20260427.md` 从 research 移过来）；`docs/research/index.md` 改写边界（仅工程视角研究/设计提案）；AGENTS.md Repository Map + Doc Naming Conventions + index.md 名单更新 | Cleaner |
 | 2026-04-28 | 暂缓 plan 收口 | 删除 `docs/exec-plan/deferred/` 子目录，内容合并为顶层 `deferred-plan.md`（章节式）；index.md 与 tech-debt-tracker 引用同步更新 | Cleaner |
 | 2026-04-28 | 文件名 lowercase 统一 | `PLAN-*` / `ROADMAP-*` 改 `plan-*` / `roadmap-*`（4 份文件重命名）；Plan ID 字符串同步小写；AGENTS.md `Doc Naming Conventions` 加"kebab-case + lowercase"强约束 | Cleaner |
 | 2026-04-28 | 文档目录索引收口 + 业务 spec 加 domain- 前缀 | `policy-graph.md` → `domain-gov-policy.md`；`gov-policy-layout.md` → `domain-gov-policy-layout.md`；4 个目录索引以 `index.md` 命名（`docs/`、`docs/prod-spec/`、`docs/research/`、`docs/exec-plan/`），保留根 `README.md` 唯一项目入口；AGENTS.md 新增 `Doc Naming Conventions` 节统一描述 5 类前缀分组 | Cleaner |

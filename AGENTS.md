@@ -16,7 +16,8 @@ Read this file before starting work. It is the repository control map.
 | `docs/architecture.md`, `docs/product-sense.md` | 架构、产品方向（不含具体业务字段） |
 | `docs/domains-overview.md`, `docs/domain-gov-policy-layout.md`, `docs/infra-overview.md` | 业务域与基础设施目录"门牌"，归档自原 `*/README.md` |
 | `docs/prod-spec/`（含 `index.md`） | 长期参考：产品与基础设施规格 |
-| `docs/research/`（含 `index.md`） | 研究底稿（自由格式归档，不再演进） |
+| `docs/prd/`（含 `index.md`） | 产品需求文档归档（来自产品/业务/合规方的原稿） |
+| `docs/research/`（含 `index.md`） | 工程视角研究底稿（设计提案、调研、技术对比） |
 | `docs/exec-plan/`（含 `index.md`），`docs/task/`，`docs/cleanup-log.md` | 工作流文档：交付计划、任务状态、清理记录 |
 | `docs/eval-test/` | 评估证据与回放产物 |
 | `domains/<context>/` | bounded-context 业务代码 |
@@ -96,11 +97,12 @@ Read this file before starting work. It is the repository control map.
 |---|---|
 | `docs/prod-spec/` | `domain-<ctx>.md` / `infra-<topic>.md` / `codegen-<topic>.md` / 单名跨域基础（`data-model.md` / `template.md`） |
 | `docs/exec-plan/` | `plan-YYYYMMDD-<slug>.md` / `roadmap-<scope>.md` / 单名工具（`tech-debt-tracker.md` / `template.md`） |
-| `docs/research/` | `<type>-<slug>-YYYYMMDD.md`（type ∈ `research`/`design`/`policy`/...） |
+| `docs/research/` | `<type>-<slug>-YYYYMMDD.md`（type ∈ `research`/`design`；仅工程视角研究） |
+| `docs/prd/` | `<topic>-<slug>-YYYYMMDD.md`（产品/业务/合规方原稿，docx 转写） |
 | `docs/` 根 | 描述性单名（`architecture.md` / `product-sense.md` / `cleanup-log.md`）；"门牌"型用 `<scope>-overview.md` 或 `domain-<ctx>-<role>.md` |
 | `skills/` | `crawler-workflow*` |
 
-每个有索引职责的目录必须有 `index.md`：当前 `docs/`、`docs/prod-spec/`、`docs/research/`、`docs/exec-plan/` 各一份。
+每个有索引职责的目录必须有 `index.md`：当前 `docs/`、`docs/prod-spec/`、`docs/prd/`、`docs/research/`、`docs/exec-plan/` 各一份。
 
 Plan ID（spec 内部使用的 ID 字符串）与文件名保持一致：`plan-20260427-mvp-policy-crawler`。
 
@@ -118,7 +120,7 @@ Plan ID（spec 内部使用的 ID 字符串）与文件名保持一致：`plan-2
 - `docs/` 按生命周期分类，不强行套统一目录形态：
   - workflow: `docs/exec-plan/`、`docs/task/`、`docs/cleanup-log.md`
   - artifact: `docs/eval-test/`
-  - long-lived: `docs/prod-spec/`、`docs/research/`、`docs/architecture.md`、`docs/product-sense.md`
+  - long-lived: `docs/prod-spec/`、`docs/prd/`、`docs/research/`、`docs/architecture.md`、`docs/product-sense.md`
 - `docs/task/` 是状态索引化的工作流目录：active/completed/archive 直接扫描。
 - `docs/exec-plan/active/` 是新活跃计划目录；关闭后归档到 `docs/exec-plan/archive/YYYY-Www/`。
 - 运行时数据存放规则：
