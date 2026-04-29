@@ -79,6 +79,7 @@ pytest tests/ -q: 124 passed
 | 事项 | 落点 |
 |---|---|
 | 开 PR | `agent/infra-20260429-codegen-feedback` |
+| PR 链接 | https://github.com/dlange666/xiniu-crawler-planning/pull/21 |
 | 后续实测 | 下一个 source codegen 自动触发 red feedback 行为 |
 | 是否需要新 task | 暂无；如多个 source 重复出现同类 pagination fallback，再提升 infra helper |
 

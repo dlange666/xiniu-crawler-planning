@@ -60,7 +60,7 @@
     {
       "id": "T-20260429-905",
       "title": "[eval] 记录 codegen feedback loop 验证证据",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-codegen-feedback",
       "spec_ref": "docs/eval-test/template.md",
       "dependency": [
@@ -70,8 +70,8 @@
         "T-20260429-904"
       ],
       "assignee": "evaluator",
-      "last_updated": "2026-04-29T18:00:00+08:00",
-      "notes": "等待最终全量 pytest 与 PR 创建后关闭。"
+      "last_updated": "2026-04-29T18:06:00+08:00",
+      "notes": "eval 已写入 docs/eval-test/codegen-feedback-loop-20260429.md；全量 pytest 124 passed；Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/21。"
     }
   ]
 }
