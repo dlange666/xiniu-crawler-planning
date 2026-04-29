@@ -18,6 +18,18 @@ def test_parse_create_page_html_ndrc() -> None:
     assert result == (9, "index", "html")
 
 
+def test_parse_create_page_html_single_quoted_total_first() -> None:
+    html = """<script>createPageHTML(3, 1, 'index', 'shtml');</script>"""
+    result = parse_create_page_html(html)
+    assert result == (3, "index", "shtml")
+
+
+def test_parse_create_page_html_container_id_first() -> None:
+    html = """<script>createPageHTML('page_div',5, 1,'fg','shtml',89);</script>"""
+    result = parse_create_page_html(html)
+    assert result == (5, "fg", "shtml")
+
+
 def test_parse_create_page_html_no_match() -> None:
     assert parse_create_page_html("<html>plain</html>") is None
 

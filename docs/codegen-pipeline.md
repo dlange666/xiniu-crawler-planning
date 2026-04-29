@@ -99,6 +99,15 @@ adapter 是纯函数：
 - `parse_list` 抽 `detail_links` 和 `next_pages`。
 - `parse_detail` 抽 `title`、`body_text`、`source_metadata`、`attachments`、`interpret_links`。
 - helper 优先用 `infra/crawl/pagination_helpers.py`。
+- 当 `infra/` helper 返回空，但页面存在明确、稳定、可静态解析的分页/API/字段信号时，
+  **不得直接放弃或写 red**。agent 必须先在当前 adapter 内实现有界 fallback：
+  - fallback 只允许写在 `domains/<business_context>/<host_slug>/` 的当前 source
+    adapter/test/golden 中；codegen 任务不得修改 `infra/`。
+  - fallback 只能是纯函数解析或 URL 生成逻辑，不能联网、sleep、retry 或绕过保护。
+  - fallback 只能依赖当前 host 的静态样本、公开 URL 规律与 `urljoin`。
+  - fallback 必须有单元测试和 golden 期望覆盖。
+  - eval 必须记录：哪个 infra helper 未覆盖、fallback 规则、是否建议另开 infra 任务提升。
+  - 只有公开 direct/API/SSR 路径和有界 fallback 都不可用时，才允许 red。
 - `urljoin` 必须用，不手拼 URL。
 - bs4 使用 `lxml` parser。
 
@@ -167,10 +176,20 @@ uv run python scripts/probe_source.py \
 - 若 verdict 为 `json_api`，优先基于 JSON artifact 设计列表解析；该优先级高于
   static HTML / SSR / headless；仍不得在 hook 内联网。
 - 若 verdict 为 `static_html`，使用 direct HTML / SSR 输出实现 adapter。
+- 如果列表页含分页信号（例如 `createPageHTML`、`page=N`、`index_N.html`、
+  `下一页`、`data-page`、公开 JS 中的 page config），必须先用
+  `infra/crawl/pagination_helpers.py`。helper 不能识别时，必须在 adapter 内写
+  host-bounded fallback 并用测试证明 `parse_list(...).next_pages` 非空；不得把
+  "infra helper 未覆盖"当作 source 不可采或 render_required；不得在 codegen
+  任务中修改 `infra/`。
+- 如果列表页或公开 JS 含 API / JSON / CDN 数据 URL 信号，但 probe 没自动归类为
+  `json_api`，必须人工检查 artifact 中的 URL 与响应结构；能稳定回放时优先按
+  JSON/API 设计，不能稳定回放时在 eval 写明证据。
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
 - `politeness_rps` 不得高于默认 1.0；无明确站点限制时使用 1.0。
 - golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
 - 测试至少覆盖 registry 校验、`parse_list` 发现详情、`parse_detail` 抽标题/正文/metadata。
+  若存在分页信号，测试还必须断言 `next_pages` 中至少 1 个预期分页 URL。
 
 ### 4.5 gates
 
@@ -224,6 +243,7 @@ green 条件：
 | workflow docs | Plan / Task / Eval 三件套存在 |
 | task JSON | Task 文件是标准 JSON 且满足 `pr-task-file` 必备字段 |
 | golden | HTML 与 `.golden.json` 各 >= 5 |
+| source capability | 已记录 API/SSR/headless 选择依据；若 infra helper 不覆盖但有静态信号，adapter fallback 已实现并测试 |
 | live smoke | `raw_records_written >= 1` 且 `errors == 0` |
 | audit | 退出码 0 |
 | 合规 | 无 robots/challenge/captcha/auth/paywall 绕过行为 |
@@ -240,6 +260,8 @@ green 条件：
 - 复现命令：完整 gates 命令
 - audit stdout：完整粘贴
 - smoke 指标：raw_records、errors、anti_bot_events、host/cohort 分布
+- source capability 记录：probe verdict、API/SSR/headless 选择依据、infra helper 是否覆盖；
+  若写了 adapter fallback，说明 fallback 规则、测试覆盖与是否建议另开 infra 任务提升
 - 文件清单：本次新增/修改的 plan/task/code/golden/test
 - PR handoff：若 green，写建议 PR 标题和 body；若 red，写下一轮动作
 - notify-message 草稿：邮件/IM 尚未接入，只写一段可复制的消息

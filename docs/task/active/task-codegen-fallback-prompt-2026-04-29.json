@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "改进 codegen fallback 提示词边界，并提升 createPageHTML 通用分页 helper。",
+  "pr_name": "codegen-fallback-prompt",
+  "branch": "agent/infra-20260429-codegen-fallback-prompt",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-801",
+      "title": "[codegen/prompt] 明确 domain fallback 边界",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-fallback-prompt",
+      "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §3-§4",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T17:08:00+08:00",
+      "notes": "pipeline 与 wrapper prompt 已说明：infra helper 不覆盖时，opencode 只能在当前 domain source 内实现 bounded fallback，不能修改 infra。PR #19 已创建。"
+    },
+    {
+      "id": "T-20260429-802",
+      "title": "[infra/crawl] 支持 createPageHTML 变体",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-fallback-prompt",
+      "spec_ref": "infra-crawl-engine.md §6",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T17:08:00+08:00",
+      "notes": "parse_create_page_html 已兼容单引号 total-first 与 container-id-first 变体。PR #19 已创建。"
+    },
+    {
+      "id": "T-20260429-803",
+      "title": "[eval] 记录验收证据",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-fallback-prompt",
+      "spec_ref": "docs/eval-test/template.md",
+      "dependency": [],
+      "assignee": "evaluator",
+      "last_updated": "2026-04-29T17:08:00+08:00",
+      "notes": "eval 已记录，PR #19 已创建。"
+    }
+  ]
+}
