@@ -122,7 +122,7 @@ hosts:   1  ({'www.sasac.gov.cn': 14})
 
 ```
 codegen sasac green
-PR: pending
+PR: https://github.com/dlange666/xiniu-crawler-planning/pull/20
 Eval: docs/eval-test/codegen-sasac-20260429.md
 Key metrics: raw_records=14, errors=0, audit=pass
 Next: review/merge
