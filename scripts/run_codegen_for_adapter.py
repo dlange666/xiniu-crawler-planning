@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""一键 codegen：传 host + entry URL，自动产出 adapter + plan + task + eval。
+"""一键 codegen：从参数或 crawl_task 表取任务，产出 adapter + plan + task + eval。
 
-把"git worktree → plan → task → 调 opencode → gates → eval → PR handoff"
-这套流程封装成单脚本。模型由 --model 参数指定，可换 minimax / sonnet / 其它。
+把"claim task → git worktree → plan → task → 调 opencode → gates → eval →
+PR handoff"这套流程封装成单脚本。模型由 --model 参数指定，可换 minimax /
+sonnet / 其它。
 
 用法：
     uv run python scripts/run_codegen_for_adapter.py \\
         --host www.most.gov.cn \\
         --entry-url https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/ \\
         --scope-mode same_origin \\
+        --model opencode/minimax-m2.5-free
+
+    uv run python scripts/run_codegen_for_adapter.py \\
+        --from-task-db \\
+        --task-db runtime/db/dev.db \\
         --model opencode/minimax-m2.5-free
 
 退出码：0=audit pass，1=任意 gate fail。
@@ -21,15 +27,36 @@ import argparse
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import textwrap
 import time
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from infra.storage.sqlite_store import SqliteMetadataStore  # noqa: E402
+
 PIPELINE = REPO / "docs/codegen-pipeline.md"
+DEFAULT_TASK_DB = REPO / "runtime/db/dev.db"
+
+
+@dataclass(frozen=True)
+class CodegenDbTask:
+    task_id: int
+    business_context: str
+    site_url: str
+    host: str
+    data_kind: str
+    scope_mode: str
+    scope_url_pattern: str | None
+    max_pages_per_run: int | None
+    politeness_rps: float
+    scope_description: str | None
 
 
 def slug(host: str) -> str:
@@ -66,6 +93,14 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
     host_slug = slug(args.host)
     spec_name = context_spec_name(args.business_context)
     today = date.today()
+    task_id = getattr(args, "codegen_task_id", None)
+    data_kind = getattr(args, "data_kind", "policy")
+    scope_description = getattr(args, "scope_description", None)
+    task_line = f"| crawl_task.task_id | `{task_id}` |\n" if task_id is not None else ""
+    scope_line = (
+        f"| scope_description | `{scope_description}` |\n"
+        if scope_description else ""
+    )
     prompt = textwrap.dedent(f"""\
         # 任务：为 {args.host} 实现采集适配器
 
@@ -78,9 +113,11 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
         | 项 | 值 |
         |---|---|
         | business_context | `{args.business_context}` |
+        | data_kind | `{data_kind}` |
         | host | `{args.host}` |
         | entry URL | `{args.entry_url}` |
         | scope_mode | `{args.scope_mode}` |
+        {task_line}{scope_line}\
         | render_mode | `direct`（确认是 SSR 后再写；JS 渲染站本期不接） |
 
         ## 必须交付
@@ -147,6 +184,137 @@ def branch_exists(branch: str) -> bool:
         ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
     ).returncode
     return rc == 0
+
+
+def claim_codegen_task(
+    db_path: Path,
+    *,
+    task_id: int | None,
+    worker_id: str,
+) -> CodegenDbTask | None:
+    """Claim one scheduled crawl_task row for local codegen.
+
+    SQLite lacks SKIP LOCKED, so the dev runner uses BEGIN IMMEDIATE to serialize
+    claims. The full external TaskSource can later map this behavior to its own
+    lock primitive.
+    """
+    schema = SqliteMetadataStore(db_path)
+    schema.init_schema()
+    schema.close()
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        if task_id is None:
+            row = conn.execute(
+                """SELECT
+                    t.task_id, t.business_context, t.site_url, t.host, t.data_kind,
+                    t.scope_mode, t.scope_url_pattern, t.max_pages_per_run,
+                    t.politeness_rps, t.scope_description
+                FROM crawl_task t
+                LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
+                WHERE COALESCE(e.status, 'scheduled') = 'scheduled'
+                  AND (
+                    e.next_run_at IS NULL
+                    OR e.next_run_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                  )
+                ORDER BY t.priority ASC, t.created_at ASC, t.task_id ASC
+                LIMIT 1"""
+            ).fetchone()
+        else:
+            row = conn.execute(
+                """SELECT
+                    t.task_id, t.business_context, t.site_url, t.host, t.data_kind,
+                    t.scope_mode, t.scope_url_pattern, t.max_pages_per_run,
+                    t.politeness_rps, t.scope_description
+                FROM crawl_task t
+                LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
+                WHERE t.task_id = ?
+                  AND COALESCE(e.status, 'scheduled') = 'scheduled'""",
+                (task_id,),
+            ).fetchone()
+
+        if row is None:
+            conn.rollback()
+            return None
+
+        conn.execute(
+            """INSERT INTO crawl_task_execution
+            (task_id, status, adapter_host, worker_id, claim_at, heartbeat_at)
+            VALUES (?, 'running', ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            ON CONFLICT(task_id) DO UPDATE SET
+                status='running',
+                adapter_host=excluded.adapter_host,
+                worker_id=excluded.worker_id,
+                claim_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')""",
+            (int(row["task_id"]), row["host"], worker_id),
+        )
+        conn.commit()
+        return CodegenDbTask(
+            task_id=int(row["task_id"]),
+            business_context=str(row["business_context"]),
+            site_url=str(row["site_url"]),
+            host=str(row["host"]),
+            data_kind=str(row["data_kind"]),
+            scope_mode=str(row["scope_mode"]),
+            scope_url_pattern=row["scope_url_pattern"],
+            max_pages_per_run=row["max_pages_per_run"],
+            politeness_rps=float(row["politeness_rps"]),
+            scope_description=row["scope_description"],
+        )
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def apply_db_task_to_args(args: argparse.Namespace, task: CodegenDbTask) -> None:
+    args.codegen_task_id = task.task_id
+    args.host = task.host
+    args.entry_url = task.site_url
+    args.business_context = task.business_context
+    args.data_kind = task.data_kind
+    args.scope_mode = task.scope_mode
+    args.scope_url_pattern = task.scope_url_pattern
+    args.max_pages_per_run = task.max_pages_per_run
+    args.politeness_rps = task.politeness_rps
+    args.scope_description = task.scope_description
+    if args.smoke_task_id is None:
+        args.smoke_task_id = task.task_id
+
+
+def mark_codegen_task_finished(
+    db_path: Path,
+    *,
+    task_id: int,
+    success: bool,
+    branch: str,
+    worker_id: str,
+) -> None:
+    status = "completed" if success else "failed"
+    run_status = "green" if success else "red"
+    conn = sqlite3.connect(db_path)
+    try:
+        with conn:
+            conn.execute(
+                """UPDATE crawl_task_execution SET
+                    status=?,
+                    last_run_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    last_run_id=?,
+                    last_run_status=?,
+                    run_count=run_count + 1,
+                    consecutive_failures=CASE WHEN ? THEN 0 ELSE consecutive_failures + 1 END,
+                    worker_id=?,
+                    heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE task_id=?""",
+                (status, branch, run_status, 1 if success else 0, worker_id, task_id),
+            )
+    finally:
+        conn.close()
 
 
 def workflow_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
@@ -245,8 +413,11 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
         f"domains/{args.business_context}/seeds/{slug(args.host)}.yaml",
         "--max-pages", "30", "--max-depth", "1",
         "--scope-mode", args.scope_mode,
+        "--business-context", args.business_context,
         "--task-id", str(smoke_task_id),
     ]
+    if getattr(args, "scope_url_pattern", None):
+        smoke_cmd.extend(["--scope-url-pattern", args.scope_url_pattern])
     res["live_smoke"] = sh_ok(smoke_cmd, cwd=worktree, env=gate_env)
     if not res["live_smoke"]:
         # 偶发 sqlite I/O 错误重试一次
@@ -265,37 +436,71 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--host", required=True, help="例：www.most.gov.cn")
-    ap.add_argument("--entry-url", required=True)
+    ap.add_argument("--host", help="例：www.most.gov.cn；--from-task-db 模式下自动填充")
+    ap.add_argument("--entry-url", help="入口 URL；--from-task-db 模式下自动填充")
     ap.add_argument("--business-context", default="gov_policy")
     ap.add_argument(
         "--scope-mode", default="same_origin",
         choices=["same_origin", "same_etld_plus_one", "url_pattern", "allowlist"],
     )
+    ap.add_argument("--scope-url-pattern", default=None)
     ap.add_argument("--model", default="opencode/minimax-m2.5-free",
                     help="opencode 模型 ID，可换 sonnet / opus / 其它")
+    ap.add_argument("--from-task-db", action="store_true",
+                    help="从 crawl_task/crawl_task_execution 中自动 claim 一个 scheduled 任务")
+    ap.add_argument("--task-db", type=Path, default=DEFAULT_TASK_DB,
+                    help="--from-task-db 使用的 SQLite DB 路径")
+    ap.add_argument(
+        "--task-id", type=int, default=None,
+        help="--from-task-db 时指定要 claim 的 crawl_task.task_id；默认取下一条 scheduled",
+    )
+    ap.add_argument("--worker-id", default=f"codegen-runner-{os.getpid()}")
     ap.add_argument("--worktree-base", default=str(REPO.parent),
                     help="worktree 父目录")
     ap.add_argument("--force", action="store_true",
                     help="worktree 已存在时清理重建")
-    ap.add_argument("--smoke-task-id", type=int,
-                    default=int(time.strftime("%H%M%S")))
+    ap.add_argument("--smoke-task-id", type=int, default=None)
     ap.add_argument("--skip-codegen", action="store_true",
                     help="只跑 gate（agent 产物已就位时调试用）")
     args = ap.parse_args()
 
+    claimed_task: CodegenDbTask | None = None
+    if args.from_task_db:
+        claimed_task = claim_codegen_task(
+            args.task_db, task_id=args.task_id, worker_id=args.worker_id,
+        )
+        if claimed_task is None:
+            sys.exit("no scheduled crawl_task found to claim")
+        apply_db_task_to_args(args, claimed_task)
+    elif not args.host or not args.entry_url:
+        ap.error("--host and --entry-url are required unless --from-task-db is set")
+
+    if args.smoke_task_id is None:
+        args.smoke_task_id = int(time.strftime("%H%M%S"))
+    args.codegen_task_id = getattr(args, "codegen_task_id", None)
+    args.data_kind = getattr(args, "data_kind", "policy")
+    args.max_pages_per_run = getattr(args, "max_pages_per_run", None)
+    args.politeness_rps = getattr(args, "politeness_rps", None)
+    args.scope_description = getattr(args, "scope_description", None)
+
     host_slug = slug(args.host)
-    branch = f"agent/feature-{date.today():%Y%m%d}-codegen-{host_slug}"
+    task_suffix = f"-t{args.codegen_task_id}" if args.codegen_task_id is not None else ""
+    branch = f"agent/feature-{date.today():%Y%m%d}-codegen-{host_slug}{task_suffix}"
     worktree = (
-        Path(args.worktree_base) / f"xiniu-crawler-codegen-{host_slug}"
+        Path(args.worktree_base) / f"xiniu-crawler-codegen-{host_slug}{task_suffix}"
     ).resolve()
     log_file = REPO / f"runtime/codegen/{host_slug}-{int(time.time())}.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"=== codegen for {args.host} ===")
+    if claimed_task is not None:
+        print(f"  source task      : crawl_task #{claimed_task.task_id} ({args.task_db})")
     print(f"  business_context : {args.business_context}")
+    print(f"  data_kind        : {args.data_kind}")
     print(f"  entry_url        : {args.entry_url}")
     print(f"  scope_mode       : {args.scope_mode}")
+    if args.scope_url_pattern:
+        print(f"  scope_pattern    : {args.scope_url_pattern}")
     print(f"  model            : {args.model}")
     print(f"  worktree         : {worktree}")
     print(f"  branch           : {branch}")
@@ -305,22 +510,34 @@ def main() -> int:
     if not PIPELINE.exists():
         sys.exit(f"missing codegen pipeline file: {PIPELINE}")
 
-    if not args.skip_codegen:
-        setup_worktree(worktree, branch, args.force)
-        write_per_task_prompt(worktree, args)
-        rc = invoke_opencode(worktree, args.model, log_file)
-        print(f"\n[codegen] opencode exit code: {rc}")
-        if rc != 0:
-            print("opencode 失败；worktree 留存供人工查 → ", worktree)
+    overall = False
+    try:
+        if not args.skip_codegen:
+            setup_worktree(worktree, branch, args.force)
+            write_per_task_prompt(worktree, args)
+            rc = invoke_opencode(worktree, args.model, log_file)
+            print(f"\n[codegen] opencode exit code: {rc}")
+            if rc != 0:
+                print("opencode 失败；worktree 留存供人工查 → ", worktree)
 
-    # 跑验收门，无论 opencode 退出码如何（agent 退出码不可信）
-    print("\n=== 验收门 ===")
-    gates = run_gates(worktree, args, args.smoke_task_id)
-    print("\n=== gate 结果 ===")
-    for name, ok in gates.items():
-        print(f"  {name:14s}: {'PASS' if ok else 'FAIL'}")
+        # 跑验收门，无论 opencode 退出码如何（agent 退出码不可信）
+        print("\n=== 验收门 ===")
+        gates = run_gates(worktree, args, args.smoke_task_id)
+        print("\n=== gate 结果 ===")
+        for name, ok in gates.items():
+            print(f"  {name:14s}: {'PASS' if ok else 'FAIL'}")
 
-    overall = all(gates.values())
+        overall = all(gates.values())
+    finally:
+        if claimed_task is not None:
+            mark_codegen_task_finished(
+                args.task_db,
+                task_id=claimed_task.task_id,
+                success=overall,
+                branch=branch,
+                worker_id=args.worker_id,
+            )
+
     verdict = "green" if overall else "red"
     print(f"\n=== 整体判定: {verdict.upper()} ===")
     print("\n下一步：")
