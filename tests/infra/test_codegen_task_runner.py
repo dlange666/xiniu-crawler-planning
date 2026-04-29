@@ -17,6 +17,7 @@ from scripts.run_codegen_for_adapter import (
     seed_artifact,
     slug,
     source_dir,
+    write_per_task_prompt,
     write_task_skeleton,
 )
 
@@ -180,6 +181,30 @@ def test_write_task_skeleton_creates_standard_pr_task_json(tmp_path: Path) -> No
     assert result.repaired is False
     assert '"file_kind": "pr-task-file"' in text
     assert f"T-{date.today():%Y%m%d}-701" in text
+
+
+def test_per_task_prompt_requires_closure_gates_and_red_probe(tmp_path: Path) -> None:
+    args = argparse.Namespace(
+        host="www.nfra.gov.cn",
+        entry_url="https://www.nfra.gov.cn/cn/view/pages/zhengwuxinxi/zhengfuxinxi.html#1",
+        business_context="gov_policy",
+        scope_mode="same_origin",
+        scope_description="from test",
+        codegen_task_id=7,
+        data_kind="policy",
+        smoke_task_id=7,
+    )
+
+    prompt_path = write_per_task_prompt(tmp_path, args)
+    text = prompt_path.read_text(encoding="utf-8")
+
+    assert "## 强制收口协议" in text
+    assert "rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm" in text
+    assert "scripts/run_crawl_task.py domains/gov_policy/nfra/nfra_seed.yaml" in text
+    assert "--db runtime/db/dev.db" in text
+    assert "## red 前必须排查" in text
+    assert "parse_list(seed_response, seed_url)" in text
+    assert "ADAPTER_META.list_url_pattern" in text
 
 
 def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:
