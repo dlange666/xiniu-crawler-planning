@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
@@ -28,7 +29,15 @@ DEFAULT_THRESHOLDS: dict[str, float] = {
     # url 发现层
     "list_pages_min": 1,       # list_pages_fetched 至少这么多（翻页若适用）
     "host_min": 1,             # 抓到内容的不同 host 数（跨子域必备时调高）
+    # 文本污染层
+    "script_noise_rate_max": 0.0,  # body_text 不允许夹带 JS/CSS/DOM 脚本噪声
 }
+
+SCRIPT_NOISE_RE = re.compile(
+    r"(<\s*/?\s*script\b|\bvar\s+\w+\s*=|\bfunction\s+\w*\s*\(|"
+    r"\bdocument\.|\bwindow\.|\$\(.*?\)|jQuery\s*\()",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def parse_thresholds(s: str | None) -> dict[str, float]:
@@ -64,9 +73,11 @@ def audit(*, db_path: Path, task_id: int) -> dict:
         "metadata_filled": 0,
         "attachments_found": 0,
         "interpret_links_found": 0,
+        "script_noise": 0,
     }
     body_lens: list[int] = []
     short_body_samples: list[tuple[str, int, str]] = []
+    script_noise_samples: list[tuple[str, str, str]] = []
     host_counter: Counter[str] = Counter()
     cohort: dict[str, list[int]] = defaultdict(list)  # host → body lengths
 
@@ -105,6 +116,10 @@ def audit(*, db_path: Path, task_id: int) -> dict:
 
         if bl < 300:
             short_body_samples.append((url, bl, title[:40]))
+        noise_match = SCRIPT_NOISE_RE.search(body)
+        if noise_match:
+            metrics["script_noise"] += 1
+            script_noise_samples.append((url, noise_match.group(0)[:40], title[:40]))
 
     rates = {
         "title_rate": metrics["title_filled"] / n,
@@ -115,6 +130,7 @@ def audit(*, db_path: Path, task_id: int) -> dict:
         "metadata_rate": metrics["metadata_filled"] / n,
         "attachments_rate": metrics["attachments_found"] / n,
         "interpret_rate": metrics["interpret_links_found"] / n,
+        "script_noise_rate": metrics["script_noise"] / n,
     }
 
     return {
@@ -137,6 +153,7 @@ def audit(*, db_path: Path, task_id: int) -> dict:
             for h, lens in cohort.items()
         },
         "short_body_samples": short_body_samples[:5],
+        "script_noise_samples": script_noise_samples[:5],
     }
 
 
@@ -147,7 +164,12 @@ def evaluate(report: dict, thresholds: dict[str, float]) -> tuple[str, list[str]
     rates = report["rates"]
     fails: list[str] = []
     for key, threshold in thresholds.items():
-        if key in rates:
+        if key.endswith("_max") and key.removesuffix("_max") in rates:
+            metric_key = key.removesuffix("_max")
+            actual = rates[metric_key]
+            if actual > threshold:
+                fails.append(f"{metric_key}: {actual:.1%} > {threshold:.1%}")
+        elif key in rates:
             actual = rates[key]
             if actual < threshold:
                 fails.append(f"{key}: {actual:.1%} < {threshold:.1%}")
@@ -190,6 +212,11 @@ def render(report: dict, verdict: str, fails: list[str]) -> str:
         out.append("--- short body (<300 chars) samples ---")
         for url, bl, title in report["short_body_samples"]:
             out.append(f"  {bl:>4} chars | {title} | {url[:70]}")
+        out.append("")
+    if report["script_noise_samples"]:
+        out.append("--- script noise samples ---")
+        for url, marker, title in report["script_noise_samples"]:
+            out.append(f"  {marker!r} | {title} | {url[:70]}")
         out.append("")
     out.append("--- per-host cohort quality ---")
     for h, q in report["cohort_quality"].items():

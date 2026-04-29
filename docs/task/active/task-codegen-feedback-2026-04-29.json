@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "codegen-feedback: 强化 opencode codegen red 反馈闭环、golden gate 与解析质量门。",
+  "pr_name": "codegen-feedback",
+  "branch": "agent/infra-20260429-codegen-feedback",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-901",
+      "title": "[codegen/wrapper] red feedback 自动迭代",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-feedback",
+      "spec_ref": "codegen-output-contract.md §3.1, §5.3",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T18:00:00+08:00",
+      "notes": "run_codegen_for_adapter.py 已支持 --max-red-iterations，wrapper red 后生成 .codegen-feedback.md，回灌失败 gate 输出并继续调用 opencode。"
+    },
+    {
+      "id": "T-20260429-902",
+      "title": "[codegen/golden] 覆盖型配对 golden gate",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-feedback",
+      "spec_ref": "codegen-output-contract.md §3, §5.1",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T18:00:00+08:00",
+      "notes": "golden gate 从 >=5 文件数改为覆盖型配对校验：>=1 list、>=3 detail；有分页信号时要求 pagination/list_2 配对。"
+    },
+    {
+      "id": "T-20260429-903",
+      "title": "[audit/quality] 文本污染与 URL scope 质量门",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-feedback",
+      "spec_ref": "codegen-output-contract.md §3.1, §5.2",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T18:00:00+08:00",
+      "notes": "audit_crawl_quality.py 增加 script_noise_rate / script_noise_rate_max；wrapper 增加 detail_url_pattern live-smoke URL 匹配 gate。"
+    },
+    {
+      "id": "T-20260429-904",
+      "title": "[prompt/spec] 收口提示词与契约同步",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-feedback",
+      "spec_ref": "codegen-output-contract.md §6.2",
+      "dependency": [],
+      "assignee": "planner",
+      "last_updated": "2026-04-29T18:00:00+08:00",
+      "notes": "docs/codegen-pipeline.md、per-task prompt、codegen-output-contract.md rev 14 已同步 SourceMetadata、short body sample、scope、pagination fallback、infra 边界要求。"
+    },
+    {
+      "id": "T-20260429-905",
+      "title": "[eval] 记录 codegen feedback loop 验证证据",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-feedback",
+      "spec_ref": "docs/eval-test/template.md",
+      "dependency": [
+        "T-20260429-901",
+        "T-20260429-902",
+        "T-20260429-903",
+        "T-20260429-904"
+      ],
+      "assignee": "evaluator",
+      "last_updated": "2026-04-29T18:06:00+08:00",
+      "notes": "eval 已写入 docs/eval-test/codegen-feedback-loop-20260429.md；全量 pytest 124 passed；Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/21。"
+    }
+  ]
+}

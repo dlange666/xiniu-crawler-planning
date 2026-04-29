@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sqlite3
 from datetime import date
 from pathlib import Path
 
 from infra.storage.sqlite_store import SqliteMetadataStore
 from scripts.run_codegen_for_adapter import (
+    GateRunResult,
     adapter_artifact,
     adapter_test_artifact,
     apply_db_task_to_args,
@@ -17,6 +19,8 @@ from scripts.run_codegen_for_adapter import (
     seed_artifact,
     slug,
     source_dir,
+    validate_golden_artifacts,
+    write_feedback_prompt,
     write_per_task_prompt,
     write_task_skeleton,
 )
@@ -205,6 +209,99 @@ def test_per_task_prompt_requires_closure_gates_and_red_probe(tmp_path: Path) ->
     assert "## red 前必须排查" in text
     assert "parse_list(seed_response, seed_url)" in text
     assert "ADAPTER_META.list_url_pattern" in text
+    assert "SourceMetadata(raw=" in text
+    assert "Golden 覆盖硬规则" in text
+    assert "detail_url_pattern" in text
+
+
+def _write_golden_pair(
+    base: Path,
+    *,
+    host_slug: str,
+    kind: str,
+    index: int,
+    payload: dict,
+) -> None:
+    stem = f"{host_slug}_golden_{kind}_{index}"
+    (base / f"{stem}.html").write_text("<html></html>", encoding="utf-8")
+    (base / f"{stem}.golden.json").write_text(
+        json.dumps(payload, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def test_validate_golden_artifacts_requires_coverage_and_pairs(tmp_path: Path) -> None:
+    _write_golden_pair(
+        tmp_path,
+        host_slug="example",
+        kind="list",
+        index=1,
+        payload={"parse_list": {"detail_links": ["https://example.gov.cn/1.html"], "next_pages": []}},
+    )
+    for i in range(1, 4):
+        _write_golden_pair(
+            tmp_path,
+            host_slug="example",
+            kind="detail",
+            index=i,
+            payload={"parse_detail": {"title": f"title-{i}", "body_text": "正文" * 80}},
+        )
+
+    ok, message = validate_golden_artifacts(tmp_path, "example")
+
+    assert ok is True
+    assert "detail=3" in message
+
+
+def test_validate_golden_artifacts_requires_pagination_pair_when_signaled(
+    tmp_path: Path,
+) -> None:
+    _write_golden_pair(
+        tmp_path,
+        host_slug="example",
+        kind="list",
+        index=1,
+        payload={
+            "parse_list": {
+                "detail_links": ["https://example.gov.cn/1.html"],
+                "next_pages": ["https://example.gov.cn/list_2.html"],
+            }
+        },
+    )
+    for i in range(1, 4):
+        _write_golden_pair(
+            tmp_path,
+            host_slug="example",
+            kind="detail",
+            index=i,
+            payload={"parse_detail": {"title": f"title-{i}", "body_text": "正文" * 80}},
+        )
+
+    ok, message = validate_golden_artifacts(tmp_path, "example")
+
+    assert ok is False
+    assert "pagination signal" in message
+
+
+def test_write_feedback_prompt_includes_failed_gate_evidence(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
+    path = write_feedback_prompt(
+        tmp_path,
+        args,
+        GateRunResult(
+            results={"pytest_new": False, "audit": False, "golden": True},
+            details={
+                "pytest_new": "AttributeError: SourceMetadata has no get",
+                "audit": "short body (<300 chars) samples\n35 chars | 微信 | https://example.gov.cn/wx.html",
+            },
+        ),
+        attempt=1,
+    )
+
+    text = path.read_text(encoding="utf-8")
+    assert "Failed gates: pytest_new, audit" in text
+    assert "SourceMetadata(raw={...})" in text
+    assert "short body samples" in text
 
 
 def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:
