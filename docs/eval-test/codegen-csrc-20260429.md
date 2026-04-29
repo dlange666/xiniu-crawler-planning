@@ -93,7 +93,7 @@ hosts:   1  ({'www.csrc.gov.cn': 25})
 
 ```
 codegen csrc green
-PR: pending
+PR: https://github.com/dlange666/xiniu-crawler-planning/pull/18
 Eval: docs/eval-test/codegen-csrc-20260429.md
 Key metrics: raw_records=25, errors=0, audit=pass
 Next: review/merge
