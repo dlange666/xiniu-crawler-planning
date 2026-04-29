@@ -1,0 +1,14 @@
+{
+  "detail_links": [
+    "https://www.nfra.gov.cn/cbircweb/DocInfo/SelectByDocId?docId=1255777",
+    "https://www.nfra.gov.cn/cbircweb/DocInfo/SelectByDocId?docId=1255816",
+    "https://www.nfra.gov.cn/cbircweb/DocInfo/SelectByDocId?docId=1255818",
+    "https://www.nfra.gov.cn/cbircweb/DocInfo/SelectByDocId?docId=1255819",
+    "https://www.nfra.gov.cn/cbircweb/DocInfo/SelectByDocId?docId=1255814"
+  ],
+  "next_pages": [
+    "https://www.nfra.gov.cn/cbircweb/solr/openGovSerch?pageNo=3&pageSize=10&searchType=1"
+  ],
+  "next_page": null,
+  "stop": false
+}

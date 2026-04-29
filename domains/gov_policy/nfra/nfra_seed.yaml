@@ -1,0 +1,12 @@
+# NFRA (国家金融监督管理总局) 数据源种子
+# spec: docs/prod-spec/domain-gov-policy.md §8 + codegen-output-contract.md §3
+
+host: www.nfra.gov.cn
+business_context: gov_policy
+data_kind: policy
+scope_mode: same_origin
+politeness_rps: 1.0
+max_pages_per_run: 5
+crawl_mode: full
+entry_urls:
+  - https://www.nfra.gov.cn/cn/static/data/DocInfo/SelectDocByItemIdAndChild/data_itemId=861,pageIndex=1,pageSize=18.json

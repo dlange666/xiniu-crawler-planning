@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "codegen-nfra: 为 www.nfra.gov.cn 生成采集适配器。",
+  "pr_name": "codegen-nfra",
+  "branch": "agent/feature-20260429-codegen-nfra-t7",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[codegen/nfra] 生成并验收采集适配器",
+      "status": "verifying",
+      "plan_id": "plan-20260429-codegen-nfra",
+      "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T16:17:00+08:00",
+      "notes": "opencode retry 改用 NFRA GET 静态 JSON 列表入口；wrapper verification: pytest_all/new、registry、task_json、golden、live_smoke、audit 均通过。PR 创建前保持 verifying。"
+    }
+  ]
+}
