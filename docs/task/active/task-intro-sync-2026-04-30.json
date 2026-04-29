@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "把 intro/xiniu-crawler-introduction.html 与 README 的 spec 数量同步到 2026-04-30 的实际仓库状态。",
+  "pr_name": "intro-sync",
+  "branch": "agent/docs-20260430-intro-sync",
+  "date": "2026-04-30",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260430-101",
+      "title": "[intro] 同步项目介绍 HTML 与 README spec 数量",
+      "status": "in_progress",
+      "plan_id": "plan-20260430-intro-sync",
+      "spec_ref": "docs/prod-spec/index.md",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-30T00:00:00+08:00",
+      "notes": "范围：intro §4 render 状态；§5 部委名单；§7 仓库结构 ASCII；§8 里程碑；README spec 数量。PDF 不重新生成。"
+    }
+  ]
+}
