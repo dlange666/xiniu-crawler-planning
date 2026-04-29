@@ -68,6 +68,18 @@ class JsonValidationResult(NamedTuple):
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class CommandResult:
+    ok: bool
+    output: str
+
+
+@dataclass(frozen=True)
+class GateRunResult:
+    results: dict[str, bool]
+    details: dict[str, str]
+
+
 def slug(host: str) -> str:
     """Return the adapter slug for a host.
 
@@ -136,6 +148,30 @@ def sh_ok(
     env: dict[str, str] | None = None,
 ) -> bool:
     return sh(cmd, cwd=cwd, check=False, env=env) == 0
+
+
+def sh_capture(
+    cmd: list[str], *, cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+) -> CommandResult:
+    print(f"\n$ {' '.join(cmd)}")
+    proc = subprocess.run(
+        cmd,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if proc.stdout:
+        print(proc.stdout, end="" if proc.stdout.endswith("\n") else "\n")
+    return CommandResult(proc.returncode == 0, proc.stdout)
+
+
+def _clip(text: str, limit: int = 4000) -> str:
+    if len(text) <= limit:
+        return text
+    return text[-limit:]
 
 
 def source_dir(worktree: Path, args: argparse.Namespace) -> Path:
@@ -219,10 +255,13 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
         uv run python -c "from infra import adapter_registry; adapter_registry.discover(); \
 print(adapter_registry.get('{args.business_context}', '{args.host}'))"
         uv run python -m json.tool docs/task/active/task-codegen-{host_slug}-{today}.json
-        test "$(find domains/{args.business_context}/{host_slug} \
--maxdepth 1 -name '*.html' | wc -l)" -ge 5
-        test "$(find domains/{args.business_context}/{host_slug} \
--maxdepth 1 -name '*.golden.json' | wc -l)" -ge 5
+        uv run python - <<'PY'
+        from scripts.run_codegen_for_adapter import golden_artifacts_exist
+        import argparse
+        from pathlib import Path
+        args = argparse.Namespace(host='{args.host}', business_context='{args.business_context}')
+        raise SystemExit(0 if golden_artifacts_exist(Path('.'), args) else 1)
+        PY
         rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm
         uv run python scripts/run_crawl_task.py \
 domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
@@ -243,6 +282,34 @@ domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
         禁止把可通过静态 JSON / CDN / API / feed / SSR 采集的 JS shell 直接写成
         `render_required`。
 
+        ## 解析质量硬规则
+
+        - `ParseDetailResult.source_metadata` 必须写成 `SourceMetadata(raw={{...}})`；
+          测试读取必须使用 `result.source_metadata.raw`，不得把 `source_metadata`
+          当作普通 dict。
+        - `body_text` 不得包含 `var `、`function`、`document.`、`window.`、
+          `<script`、`</script`、`$(...)` 等脚本噪声；如正文来自 JS 模板字面量，
+          只能抽取正文变量自身，不能从第一个反引号截到最后一个反引号。
+        - `detail_links` 必须属于本任务业务 scope。audit 出现 short body sample
+          或低质量 URL 时，先判断该 URL 是否是导航、搜索、社媒、移动入口、
+          站点说明、栏目页等非政策详情；非业务详情必须在 `parse_list` 或
+          `ADAPTER_META.detail_url_pattern` 中过滤，禁止通过降低 gate 通过。
+        - `next_pages` 要按自然页码排序，不能出现 `1, 10, 11, 2` 这类字典序。
+
+        ## Golden 覆盖硬规则
+
+        golden 不是只凑数量。必须使用一一配对命名：
+
+        - `{host_slug}_golden_list_1.html` +
+          `{host_slug}_golden_list_1.golden.json`
+        - `{host_slug}_golden_detail_1.html` +
+          `{host_slug}_golden_detail_1.golden.json`（至少 3 个 detail）
+        - 若存在分页信号，至少再提供 `{host_slug}_golden_list_2.html` +
+          `{host_slug}_golden_list_2.golden.json`
+
+        每个 `.golden.json` 必须由当前 adapter 输出重新生成，并通过
+        `uv run python -m json.tool`。聚合型 JSON 不能替代 HTML 同名配对。
+
         ## red 前必须排查
 
         如果 live smoke 或 audit 失败，不能立即结束。必须先做并在 eval 记录：
@@ -251,9 +318,11 @@ domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
         2. 单独 curl seed URL，确认 HTTP 状态、content-type 和响应体
         3. 单独调用 `parse_list(seed_response, seed_url)`，确认 `detail_links > 0`
         4. 单独 curl 一个 detail URL，确认 `parse_detail` 抽出 title / body / metadata
-        5. parser 单独可用但 runner 无数据时，检查 seed URL、scope、robots、
+        5. 逐条分析 audit short body samples / script_noise / detail_url_pattern
+           失败样本，判断是正文抽取污染还是非业务链接误入
+        6. parser 单独可用但 runner 无数据时，检查 seed URL、scope、robots、
            runtime checkpoint、`ADAPTER_META.list_url_pattern`
-        6. 只有这些检查完成后，才允许写 red
+        7. 只有这些检查完成后，才允许写 red
 
         ## 你需要自己探的事
 
@@ -472,9 +541,16 @@ def mark_codegen_task_finished(
     success: bool,
     branch: str,
     worker_id: str,
+    eval_path: Path | None = None,
+    failed_gates: list[str] | None = None,
 ) -> None:
     status = "completed" if success else "failed"
     run_status = "green" if success else "red"
+    error_kind = None if success else "codegen_gate_failed"
+    error_detail = None
+    if not success:
+        gates = ", ".join(failed_gates or ["unknown"])
+        error_detail = f"wrapper gates failed: {gates}"
     conn = sqlite3.connect(db_path)
     try:
         with conn:
@@ -487,9 +563,24 @@ def mark_codegen_task_finished(
                     run_count=run_count + 1,
                     consecutive_failures=CASE WHEN ? THEN 0 ELSE consecutive_failures + 1 END,
                     worker_id=?,
-                    heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                    heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    last_error_kind=?,
+                    last_error_detail=?,
+                    last_eval_path=?,
+                    needs_manual_review=?
                 WHERE task_id=?""",
-                (status, branch, run_status, 1 if success else 0, worker_id, task_id),
+                (
+                    status,
+                    branch,
+                    run_status,
+                    1 if success else 0,
+                    worker_id,
+                    error_kind,
+                    error_detail,
+                    str(eval_path) if eval_path else None,
+                    0 if success else 1,
+                    task_id,
+                ),
             )
     finally:
         conn.close()
@@ -647,29 +738,105 @@ def codegen_task_json_valid(worktree: Path, args: argparse.Namespace) -> bool:
 
 def golden_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
     artifacts_dir = source_dir(worktree, args)
-    html_count = len(list(artifacts_dir.glob("*.html")))
-    json_count = len(list(artifacts_dir.glob("*.golden.json")))
-    if html_count < 5 or json_count < 5:
-        print(
-            "[gate] golden artifacts insufficient: "
-            f"html={html_count}, golden_json={json_count}, required>=5 each"
-        )
+    ok, message = validate_golden_artifacts(artifacts_dir, slug(args.host))
+    if not ok:
+        print(f"[gate] golden artifacts invalid: {message}")
         return False
     return True
 
 
-def invoke_opencode(worktree: Path, model: str, log_file: Path) -> int:
+def _json_contains_key(value: Any, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_json_contains_key(v, key) for v in value.values())
+    if isinstance(value, list):
+        return any(_json_contains_key(v, key) for v in value)
+    return False
+
+
+def _json_has_nonempty_next_pages(value: Any) -> bool:
+    if isinstance(value, dict):
+        next_pages = value.get("next_pages")
+        if isinstance(next_pages, list) and len(next_pages) > 0:
+            return True
+        return any(_json_has_nonempty_next_pages(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_json_has_nonempty_next_pages(v) for v in value)
+    return False
+
+
+def validate_golden_artifacts(artifacts_dir: Path, host_slug: str) -> tuple[bool, str]:
+    """Validate coverage-oriented golden files instead of plain file counts."""
+    html_files = sorted(artifacts_dir.glob(f"{host_slug}_golden_*.html"))
+    json_files = sorted(artifacts_dir.glob(f"{host_slug}_golden_*.golden.json"))
+    html_by_stem = {p.with_suffix("").name: p for p in html_files}
+    json_by_stem = {p.name.removesuffix(".golden.json"): p for p in json_files}
+    paired_stems = sorted(set(html_by_stem) & set(json_by_stem))
+    missing_json = sorted(set(html_by_stem) - set(json_by_stem))
+    missing_html = sorted(set(json_by_stem) - set(html_by_stem))
+    if missing_json:
+        return False, f"missing paired golden JSON for: {', '.join(missing_json[:5])}"
+    if missing_html:
+        return False, f"missing paired golden HTML for: {', '.join(missing_html[:5])}"
+
+    list_pairs = 0
+    detail_pairs = 0
+    pagination_pairs = 0
+    pagination_signal = False
+    invalid_json: list[str] = []
+    for stem in paired_stems:
+        json_path = json_by_stem[stem]
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            invalid_json.append(f"{json_path.name}: {exc.msg}")
+            continue
+        if "_golden_list_" in stem or stem.endswith("_golden_list"):
+            list_pairs += 1
+        if "_golden_detail_" in stem or stem.endswith("_golden_detail"):
+            detail_pairs += 1
+        if re.search(r"_golden_list_(?:[2-9]|\d{2,})$", stem) or "pagination" in stem:
+            pagination_pairs += 1
+        if _json_contains_key(payload, "parse_list") and _json_has_nonempty_next_pages(payload):
+            pagination_signal = True
+
+    if invalid_json:
+        return False, "; ".join(invalid_json[:3])
+    if len(paired_stems) < 4:
+        return False, f"paired golden count={len(paired_stems)}, required>=4"
+    if list_pairs < 1:
+        return False, "required >=1 paired list golden"
+    if detail_pairs < 3:
+        return False, f"paired detail golden count={detail_pairs}, required>=3"
+    if pagination_signal and pagination_pairs < 1:
+        return False, "pagination signal found, required >=1 paired pagination/list_2 golden"
+    return True, (
+        f"paired={len(paired_stems)}, list={list_pairs}, detail={detail_pairs}, "
+        f"pagination={pagination_pairs}"
+    )
+
+
+def invoke_opencode(
+    worktree: Path,
+    model: str,
+    log_file: Path,
+    *,
+    feedback_file: Path | None = None,
+) -> int:
     """用 opencode 原生 file attachment 加载 pipeline + per-task prompt。"""
     print(f"\n[codegen] invoking {model} ... 输出 → {log_file}")
+    cmd = [
+        "opencode", "run",
+        "Execute the attached codegen pipeline for this single-host task.",
+        "-m", model,
+        "-f", "docs/codegen-pipeline.md",
+        "-f", ".codegen-prompt.md",
+    ]
+    if feedback_file is not None:
+        cmd[2] = "Continue the existing codegen task and fix the wrapper red gates."
+        cmd.extend(["-f", str(feedback_file.relative_to(worktree))])
     with open(log_file, "w") as logf:
         proc = subprocess.Popen(
-            [
-                "opencode", "run",
-                "Execute the attached codegen pipeline for this single-host task.",
-                "-m", model,
-                "-f", "docs/codegen-pipeline.md",
-                "-f", ".codegen-prompt.md",
-            ],
+            cmd,
             cwd=worktree,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -686,9 +853,41 @@ def invoke_opencode(worktree: Path, model: str, log_file: Path) -> int:
         return proc.wait()
 
 
-def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> dict:
-    """跑 pipeline §4.5 全套验收门，返回 {gate: pass|fail}。"""
+def detail_url_pattern_gate(
+    worktree: Path,
+    args: argparse.Namespace,
+    smoke_db: Path,
+    smoke_task_id: int,
+) -> CommandResult:
+    script = textwrap.dedent(f"""\
+        import sqlite3
+        from infra import adapter_registry
+
+        adapter_registry.discover()
+        entry = adapter_registry.get({args.business_context!r}, {args.host!r})
+        pattern = entry.detail_url_pattern
+        con = sqlite3.connect({str(smoke_db)!r})
+        rows = con.execute(
+            "SELECT url FROM crawl_raw WHERE task_id=? ORDER BY url",
+            ({smoke_task_id},),
+        ).fetchall()
+        total = len(rows)
+        matched = sum(1 for (url,) in rows if pattern.search(url))
+        rate = matched / total if total else 0.0
+        print(f"detail_url_pattern_match_rate: {{rate:.1%}} ({{matched}}/{{total}})")
+        if total:
+            misses = [url for (url,) in rows if not pattern.search(url)]
+            for url in misses[:5]:
+                print(f"miss: {{url}}")
+        raise SystemExit(0 if total > 0 and rate >= 0.95 else 1)
+        """)
+    return sh_capture(["uv", "run", "python", "-c", script], cwd=worktree)
+
+
+def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> GateRunResult:
+    """跑 pipeline §4.5 全套验收门，返回确定性结果和诊断输出。"""
     res: dict[str, bool] = {}
+    details: dict[str, str] = {}
     runtime = worktree / "runtime"
     smoke_db = runtime / "db/dev.db"
     smoke_blob_root = runtime / "raw"
@@ -698,23 +897,44 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
         "CRAWLER_DB_PATH": str(smoke_db),
         "CRAWLER_BLOB_ROOT": str(smoke_blob_root),
     }
-    res["pytest_all"] = sh_ok(
+    cmd_result = sh_capture(
         ["uv", "run", "pytest", "tests/", "-q"], cwd=worktree, env=gate_env)
-    res["pytest_new"] = sh_ok(
+    res["pytest_all"] = cmd_result.ok
+    details["pytest_all"] = _clip(cmd_result.output)
+    cmd_result = sh_capture(
         [
             "uv", "run", "pytest",
             str(adapter_test_artifact(worktree, args).relative_to(worktree)), "-v",
         ],
         cwd=worktree, env=gate_env)
-    res["registry"] = sh_ok(
+    res["pytest_new"] = cmd_result.ok
+    details["pytest_new"] = _clip(cmd_result.output)
+    cmd_result = sh_capture(
         ["uv", "run", "python", "-c",
          f"from infra import adapter_registry; "
          f"adapter_registry.discover(); "
          f"print(adapter_registry.get('{args.business_context}', '{args.host}'))"],
         cwd=worktree, env=gate_env)
+    res["registry"] = cmd_result.ok
+    details["registry"] = _clip(cmd_result.output)
     res["workflow_docs"] = workflow_artifacts_exist(worktree, args)
-    res["task_json"] = codegen_task_json_valid(worktree, args)
-    res["golden"] = golden_artifacts_exist(worktree, args)
+    details["workflow_docs"] = (
+        "workflow docs present" if res["workflow_docs"] else "missing workflow docs"
+    )
+    task_result = normalize_task_json(task_artifact_path(worktree, args))
+    res["task_json"] = task_result.ok
+    if task_result.ok and task_result.repaired:
+        print("[gate] task JSON repaired to canonical JSON")
+    elif not task_result.ok:
+        print(f"[gate] task JSON invalid: {task_result.error}")
+    details["task_json"] = "ok" if task_result.ok else (task_result.error or "invalid")
+    golden_ok, golden_detail = validate_golden_artifacts(
+        source_dir(worktree, args), slug(args.host)
+    )
+    res["golden"] = golden_ok
+    if not golden_ok:
+        print(f"[gate] golden artifacts invalid: {golden_detail}")
+    details["golden"] = golden_detail
     if smoke_db.exists():
         smoke_db.unlink()
     # 清掉 WAL/SHM 文件，规避 sqlite 偶发 disk I/O error
@@ -730,20 +950,83 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
     ]
     if getattr(args, "scope_url_pattern", None):
         smoke_cmd.extend(["--scope-url-pattern", args.scope_url_pattern])
-    res["live_smoke"] = sh_ok(smoke_cmd, cwd=worktree, env=gate_env)
+    cmd_result = sh_capture(smoke_cmd, cwd=worktree, env=gate_env)
+    res["live_smoke"] = cmd_result.ok
+    details["live_smoke"] = _clip(cmd_result.output)
     if not res["live_smoke"]:
         # 偶发 sqlite I/O 错误重试一次
         print("[gate] live_smoke 失败，1 秒后重试一次")
         time.sleep(1)
         for stale in (worktree / "runtime/db").glob("dev.db*"):
             stale.unlink()
-        res["live_smoke"] = sh_ok(smoke_cmd, cwd=worktree, env=gate_env)
-    res["audit"] = sh_ok(
+        retry_result = sh_capture(smoke_cmd, cwd=worktree, env=gate_env)
+        res["live_smoke"] = retry_result.ok
+        details["live_smoke"] += "\n\n--- retry ---\n" + _clip(retry_result.output)
+    cmd_result = sh_capture(
         ["uv", "run", "python", "scripts/audit_crawl_quality.py",
          "--task-id", str(smoke_task_id),
          "--db", str(smoke_db)],
         cwd=worktree, env=gate_env)
-    return res
+    res["audit"] = cmd_result.ok
+    details["audit"] = _clip(cmd_result.output)
+    if res["live_smoke"]:
+        cmd_result = detail_url_pattern_gate(worktree, args, smoke_db, smoke_task_id)
+        res["detail_url_pattern"] = cmd_result.ok
+        details["detail_url_pattern"] = _clip(cmd_result.output)
+    else:
+        res["detail_url_pattern"] = False
+        details["detail_url_pattern"] = "skipped because live_smoke failed"
+    return GateRunResult(res, details)
+
+
+def write_feedback_prompt(
+    worktree: Path,
+    args: argparse.Namespace,
+    gate_run: GateRunResult,
+    attempt: int,
+) -> Path:
+    failed = [name for name, ok in gate_run.results.items() if not ok]
+    sections: list[str] = []
+    for gate in failed:
+        output = gate_run.details.get(gate, "")
+        sections.append(f"### {gate}\n\n```text\n{_clip(output, 6000)}\n```")
+    if not sections:
+        sections.append(
+            "No failed gate details were captured; rerun full gates and inspect output."
+        )
+    failed_output = "\n\n".join(sections)
+    path = worktree / ".codegen-feedback.md"
+    path.write_text(
+        textwrap.dedent(f"""\
+        # Wrapper red feedback attempt {attempt}
+
+        The wrapper gates are authoritative. Do not mark eval green until every
+        gate below passes. Fix the current worktree in place; do not restart the
+        task, do not lower thresholds, and do not modify `infra/`.
+
+        Failed gates: {", ".join(failed) if failed else "none"}
+
+        Required triage:
+
+        1. Read the failing gate output below before editing.
+        2. If audit shows short body samples, decide whether each URL is outside
+           business scope. Filter non-policy/navigation/search/social/mobile
+           links in `parse_list` or tighten `ADAPTER_META.detail_url_pattern`.
+        3. If audit shows script noise, fix `parse_detail` so `body_text` excludes
+           JS/CSS/nav text. Do not satisfy length gates with polluted text.
+        4. If pytest fails around metadata, remember `source_metadata` is
+           `SourceMetadata(raw={{...}})` and tests must read `.raw`.
+        5. Regenerate paired golden JSON from the current adapter after parser
+           fixes. Golden files must be HTML/JSON one-to-one pairs.
+        6. Rerun the full closure gates from `.codegen-prompt.md`.
+
+        ## Failed Gate Output
+
+        {failed_output}
+        """),
+        encoding="utf-8",
+    )
+    return path
 
 
 def record_wrapper_eval(
@@ -756,6 +1039,7 @@ def record_wrapper_eval(
     gates: dict[str, bool],
     overall: bool,
     gate_error: str | None = None,
+    gate_details: dict[str, str] | None = None,
 ) -> Path:
     """Ensure wrapper-level green/red evidence is written into eval-test.
 
@@ -804,6 +1088,21 @@ def record_wrapper_eval(
         """)
     if gate_error:
         wrapper_section += f"\nWrapper exception: `{gate_error}`\n"
+    if gate_details:
+        failed_detail_sections: list[str] = []
+        for name, ok in gates.items():
+            if ok:
+                continue
+            detail = gate_details.get(name, "").strip()
+            if not detail:
+                continue
+            failed_detail_sections.append(
+                f"### {name}\n\n```text\n{_clip(detail, 3000)}\n```"
+            )
+        if failed_detail_sections:
+            wrapper_section += "\n### Failed Gate Details\n\n"
+            wrapper_section += "\n\n".join(failed_detail_sections)
+            wrapper_section += "\n"
 
     if eval_path.exists():
         current = eval_path.read_text(encoding="utf-8")
@@ -870,6 +1169,12 @@ def main() -> int:
     ap.add_argument("--smoke-task-id", type=int, default=None)
     ap.add_argument("--skip-codegen", action="store_true",
                     help="只跑 gate（agent 产物已就位时调试用）")
+    ap.add_argument(
+        "--max-red-iterations",
+        type=int,
+        default=3,
+        help="wrapper gate red 后自动把失败证据回喂 agent 的最大次数",
+    )
     args = ap.parse_args()
 
     claimed_task: CodegenDbTask | None = None
@@ -897,8 +1202,10 @@ def main() -> int:
     worktree = (
         Path(args.worktree_base) / f"xiniu-crawler-codegen-{host_slug}{task_suffix}"
     ).resolve()
-    log_file = REPO / f"runtime/codegen/{host_slug}-{int(time.time())}.log"
-    log_file.parent.mkdir(parents=True, exist_ok=True)
+    log_dir = REPO / "runtime/codegen"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    run_stamp = int(time.time())
+    log_file = log_dir / f"{host_slug}-{run_stamp}.log"
 
     print(f"=== codegen for {args.host} ===")
     if claimed_task is not None:
@@ -920,32 +1227,59 @@ def main() -> int:
 
     overall = False
     gates: dict[str, bool] = {}
+    gate_details: dict[str, str] = {}
     opencode_rc: int | None = None
     gate_error: str | None = None
+    eval_path: Path | None = None
     try:
         if not args.skip_codegen:
             setup_worktree(worktree, branch, args.force)
             task_path = write_task_skeleton(worktree, args, branch)
             print(f"[codegen] wrote task JSON skeleton: {task_path}")
             write_per_task_prompt(worktree, args)
-            opencode_rc = invoke_opencode(worktree, args.model, log_file)
-            print(f"\n[codegen] opencode exit code: {opencode_rc}")
-            if opencode_rc != 0:
-                print("opencode 失败；worktree 留存供人工查 → ", worktree)
 
-        # 跑验收门，无论 opencode 退出码如何（agent 退出码不可信）
-        print("\n=== 验收门 ===")
-        try:
-            gates = run_gates(worktree, args, args.smoke_task_id)
-        except Exception as e:  # noqa: BLE001
-            gate_error = f"{type(e).__name__}: {e}"
-            gates = {"wrapper_exception": False}
-            print(f"[gate] wrapper exception: {gate_error}")
-        print("\n=== gate 结果 ===")
-        for name, ok in gates.items():
-            print(f"  {name:14s}: {'PASS' if ok else 'FAIL'}")
+        attempts = 1 if args.skip_codegen else max(1, args.max_red_iterations + 1)
+        feedback_file: Path | None = None
+        for attempt in range(1, attempts + 1):
+            if not args.skip_codegen:
+                log_file = log_dir / f"{host_slug}-{run_stamp}-attempt{attempt}.log"
+                opencode_rc = invoke_opencode(
+                    worktree,
+                    args.model,
+                    log_file,
+                    feedback_file=feedback_file,
+                )
+                print(f"\n[codegen] opencode exit code: {opencode_rc}")
+                if opencode_rc != 0:
+                    print("opencode 失败；仍继续跑 wrapper gates → ", worktree)
 
-        overall = all(gates.values())
+            # 跑验收门，无论 opencode 退出码如何（agent 退出码不可信）
+            print(f"\n=== 验收门 attempt {attempt}/{attempts} ===")
+            gate_error = None
+            try:
+                gate_run = run_gates(worktree, args, args.smoke_task_id)
+                gates = gate_run.results
+                gate_details = gate_run.details
+            except Exception as e:  # noqa: BLE001
+                gate_error = f"{type(e).__name__}: {e}"
+                gates = {"wrapper_exception": False}
+                gate_details = {"wrapper_exception": gate_error}
+                print(f"[gate] wrapper exception: {gate_error}")
+            print("\n=== gate 结果 ===")
+            for name, ok in gates.items():
+                print(f"  {name:20s}: {'PASS' if ok else 'FAIL'}")
+
+            overall = all(gates.values())
+            if overall or args.skip_codegen or attempt >= attempts:
+                break
+            feedback_file = write_feedback_prompt(
+                worktree,
+                args,
+                GateRunResult(gates, gate_details),
+                attempt,
+            )
+            print(f"[codegen] wrote red feedback prompt: {feedback_file}")
+
         eval_path = record_wrapper_eval(
             worktree=worktree,
             args=args,
@@ -955,6 +1289,7 @@ def main() -> int:
             gates=gates,
             overall=overall,
             gate_error=gate_error,
+            gate_details=gate_details,
         )
         print(f"[eval] wrapper evidence: {eval_path}")
     finally:
@@ -965,6 +1300,8 @@ def main() -> int:
                 success=overall,
                 branch=branch,
                 worker_id=args.worker_id,
+                eval_path=eval_path,
+                failed_gates=[name for name, ok in gates.items() if not ok],
             )
 
     verdict = "green" if overall else "red"

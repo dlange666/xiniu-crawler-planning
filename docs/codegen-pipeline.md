@@ -27,7 +27,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 | task | wrapper + agent | wrapper 预生成标准 JSON 骨架；agent 只更新字段值，推进 pending -> in_progress -> verifying -> completed/failed |
 | code | agent | 只写允许范围内的 adapter / seed / test / golden |
 | gates | wrapper + agent | agent 可自跑；wrapper 仍会重复跑确定性 gates |
-| eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准 |
+| eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准；red 时 wrapper 最多回灌 3 次失败证据让 agent 自主修复 |
 | PR | wrapper / 人 | gates green 后创建 draft PR；agent 不直接合并 |
 | merge | 人审 / repo owner | PR 合并后进入 main；agent 不自合并 |
 | notify-message | wrapper / 人 | 邮件/IM 尚未接入；只输出待发送消息草稿 |
@@ -51,6 +51,9 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
   创建或追加 `Wrapper Gate Result`；即使 opencode 异常退出或漏写 eval，
   red 结果也必须留下 eval-test 证据。
+- wrapper gate red 时会生成 `.codegen-feedback.md`，回灌失败 gate、pytest 输出、
+  audit 样本和 URL pattern miss；agent 必须基于该文件继续迭代，不得降低阈值或
+  把非业务链接误入归咎于 gate。
 
 ## 2. 允许写入范围
 
@@ -98,6 +101,15 @@ adapter 是纯函数：
 
 - `parse_list` 抽 `detail_links` 和 `next_pages`。
 - `parse_detail` 抽 `title`、`body_text`、`source_metadata`、`attachments`、`interpret_links`。
+- `source_metadata` 必须是 `SourceMetadata(raw={...})`；测试读取时使用
+  `result.source_metadata.raw`，不得把它当普通 dict。
+- `body_text` 不得夹带 JS/CSS/DOM 脚本噪声，例如 `var ... =`、`function`、
+  `document.`、`window.`、`<script`、`</script`、`$(...)`。若正文来自 JS
+  模板字面量，只抽正文变量自身，不能从第一个反引号截到最后一个反引号。
+- `detail_links` 必须属于本任务业务 scope；短正文 audit sample、社媒/移动入口/
+  搜索页/导航页等非业务链接必须在 `parse_list` 或 `ADAPTER_META.detail_url_pattern`
+  过滤。
+- `next_pages` 必须按自然页码排序。
 - helper 优先用 `infra/crawl/pagination_helpers.py`。
 - 当 `infra/` helper 返回空，但页面存在明确、稳定、可静态解析的分页/API/字段信号时，
   **不得直接放弃或写 red**。agent 必须先在当前 adapter 内实现有界 fallback：
@@ -187,7 +199,10 @@ uv run python scripts/probe_source.py \
   JSON/API 设计，不能稳定回放时在 eval 写明证据。
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
 - `politeness_rps` 不得高于默认 1.0；无明确站点限制时使用 1.0。
-- golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
+- golden 采用覆盖门槛而非纯数量门槛：至少 1 个列表页配对、3 个详情页配对；
+  若存在分页信号，至少再提供 1 个分页页配对。HTML 与 `.golden.json` 必须一一
+  同名配对，例如 `<host>_golden_detail_1.html` 对应
+  `<host>_golden_detail_1.golden.json`；聚合型 JSON 不能替代配对样本。
 - 测试至少覆盖 registry 校验、`parse_list` 发现详情、`parse_detail` 抽标题/正文/metadata。
   若存在分页信号，测试还必须断言 `next_pages` 中至少 1 个预期分页 URL。
 
@@ -205,8 +220,13 @@ uv run python -c "from infra import adapter_registry; adapter_registry.discover(
 
 uv run python -m json.tool docs/task/active/task-codegen-<host_slug>-YYYY-MM-DD.json
 
-test "$(find domains/<business_context>/<host_slug> -maxdepth 1 -name '*.html' | wc -l)" -ge 5
-test "$(find domains/<business_context>/<host_slug> -maxdepth 1 -name '*.golden.json' | wc -l)" -ge 5
+uv run python - <<'PY'
+from scripts.run_codegen_for_adapter import golden_artifacts_exist
+import argparse
+from pathlib import Path
+args = argparse.Namespace(host='<host>', business_context='<business_context>')
+raise SystemExit(0 if golden_artifacts_exist(Path('.'), args) else 1)
+PY
 
 rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm
 
@@ -242,10 +262,11 @@ green 条件：
 | registry | 能 resolve 当前 host |
 | workflow docs | Plan / Task / Eval 三件套存在 |
 | task JSON | Task 文件是标准 JSON 且满足 `pr-task-file` 必备字段 |
-| golden | HTML 与 `.golden.json` 各 >= 5 |
+| golden | 覆盖型配对样本通过：≥1 list、≥3 detail；有分页信号时 ≥1 pagination/list_2 |
+| detail_url_pattern | live smoke 入库 URL 至少 95% 匹配当前 adapter 的 `ADAPTER_META.detail_url_pattern` |
 | source capability | 已记录 API/SSR/headless 选择依据；若 infra helper 不覆盖但有静态信号，adapter fallback 已实现并测试 |
 | live smoke | `raw_records_written >= 1` 且 `errors == 0` |
-| audit | 退出码 0 |
+| audit | 退出码 0；默认包含 `title_rate`、`body_100_rate`、`metadata_rate`、`script_noise_rate_max` |
 | 合规 | 无 robots/challenge/captcha/auth/paywall 绕过行为 |
 
 ### 4.6 eval
