@@ -11,7 +11,7 @@ from domains.gov_policy.most import most_adapter as most
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-GOLDEN_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/most"
+GOLDEN_DIR = Path(__file__).parent / "fixtures"
 LIST_HTML = GOLDEN_DIR / "most_golden_list_page.html"
 LIST_EXPECT = GOLDEN_DIR / "most_golden_list_page.golden.json"
 DETAIL_CASES = sorted(GOLDEN_DIR.glob("most_golden_detail_*.golden.json"))

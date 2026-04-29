@@ -55,7 +55,7 @@
       "dependency": ["T-20260429-104"],
       "assignee": "agent",
       "last_updated": "2026-04-29T14:09:00+08:00",
-      "notes": "uv run pytest tests/gov_policy/test_adapter_ndrc.py -v -> 7 passed；uv run pytest tests/ -q -> 89 passed。"
+      "notes": "原验收命令已通过；现行测试路径为 tests/domains/gov_policy/ndrc/test_adapter.py。uv run pytest tests/ -q -> 89 passed。"
     },
     {
       "id": "T-20260429-106",

@@ -1,6 +1,6 @@
 # Infra 通用爬虫引擎
 
-> **版本**：rev 4 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 6 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：MVP 已实现核心（commit 1987ac8）；高级特性（host_score 外层 / aging / AI relevance）随阶段演进。
 
 > 适用：`infra/crawl/` 模块。本 spec 规定通用爬虫引擎的对外契约——
@@ -258,14 +258,14 @@ probe 仍使用共享 `HttpClient` 与 `RobotsChecker`；它不是绕过层。
 - **多 host host_score 外层调度**：单 host 任务退化为 round-robin；多 host 任务会出现时（M3.5 多 task 并行）实现
 - **AI 辅助 priority_score**：等 M3 infra/ai 接入后做（research §3 7 因子完整公式）
 - **aging_bonus 防饥饿**：单 host MVP 用不上；多 host 时由 frontier 在出队时计算
-- **headless 渲染 / 滚动 / 加载更多**：M5 渲染池（TD-008，见 `infra-render-pool.md`）
+- **真实 Playwright 渲染 / 滚动 / 加载更多**：M5 渲染池后续任务（TD-008，见 `infra-render-pool.md`）；当前仅支持 `RendererPool` 注入和 adapter 明确信号触发的基础 fallback。
 - **AI 链接发现**：M3.5+ codegen 平台
 - **Sitemap 解析**：可作为 helper 加入（`parse_sitemap`）；当前 NDRC 不需要
 
 ## 11. 验收点
 
 - 单元：见 `tests/infra/{test_strategies, test_scope, test_pagination_helpers, test_dedup}.py`（共 ~17 用例）
-- 黄金：`tests/gov_policy/test_ndrc_adapter.py::test_parse_list_emits_pagination`（验证 createPageHTML 解析）
+- 黄金：`tests/domains/gov_policy/ndrc/test_adapter.py::test_parse_list_emits_pagination`（验证 createPageHTML 解析）
 - 单元覆盖：`tests/infra/test_pagination_helpers.py` 覆盖 total-first 双/单引号与 container-id-first createPageHTML 变体
 - 端到端：`scripts/run_crawl_task.py` 配 `--max-depth=2 --max-pages=15+` 跑 NDRC，期望 9 list + 数条 detail + 解读 + 附件均到位
 
@@ -273,6 +273,8 @@ probe 仍使用共享 `HttpClient` 与 `RobotsChecker`；它不是绕过层。
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 6 | 2026-04-29 | `CrawlEngine` 增加 renderer 注入入口，adapter 明确 `should_render` 或解析失败 fallback 时可使用 `infra/render` 基础池；默认 disabled，不启动真实浏览器 | `infra-render-pool.md` rev 3 |
+| rev 5 | 2026-04-29 | 验收点中的 NDRC golden 测试路径同步为 `tests/domains/gov_policy/ndrc/test_adapter.py` | `codegen-output-contract.md` rev 16 |
 | rev 4 | 2026-04-29 | 扩展 `parse_create_page_html`，支持政府站常见的单引号 total-first 与 container-id-first 变体（如 `createPageHTML('page_div',5,1,'fg','shtml',89)`）；避免 codegen 因 helper 未覆盖而只采首页 | `pagination_helpers.py`、`test_pagination_helpers.py`、`codegen-output-contract.md` rev 13 |
 | rev 3 | 2026-04-29 | 新增 `infra/source_probe` 与 `scripts/probe_source.py` 契约：codegen 先通过受控工具判断 static / JSON API / headless_required，并把 artifact 写入 `runtime/probe/`；AJAX/JSON 不再由 adapter hook 自行联网 | `codegen-output-contract.md` rev 6 |
 | rev 2 | 2026-04-28 | 补充 headless render pool 的 spec 归属；CrawlEngine v1 仍不实现渲染，只把 M5 能力边界指向 `infra-render-pool.md` | TD-008 / `infra-render-pool.md` |

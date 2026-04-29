@@ -1,7 +1,7 @@
 # Infra Headless Render Pool · 按需浏览器渲染池
 
-> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：active
-> **实施状态**：M5 暂缓（TD-008；计划见 `docs/exec-plan/deferred-plan.md#plan-20260428-render-pool-bootstrap`）。当前代码只允许 adapter 声明 `render_mode=headless`，`CrawlEngine` 会显式拒绝执行，避免误以为已支持。
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
+> **实施状态**：基础切片已实现（`infra/render/{types,config,decision,pool,playwright_backend}.py` + `CrawlEngine` renderer 注入）；真实 Playwright 浏览器执行、render queue/backpressure 与真实 JS 站点验收仍属 M5 后续任务。
 
 > 本 spec 定义 `infra/render/` 的长期契约：headless 只能作为抓取层级末档的
 > 按需能力，服务 JS 渲染站点、无限滚动与"加载更多"等静态 HTML / JSON API
@@ -21,9 +21,12 @@
 不覆盖业务解析规则。业务域仍只通过 adapter hook 暴露 `parse_list` /
 `parse_detail` / `should_render` 等纯函数。
 
-当前 rev 2 只新增 render 前置探查能力：`infra/source_probe` 可以返回
-`headless_required`，并保留静态响应 / JSON API 发现 artifact。它不启动浏览器；
-真正的 Playwright pool 仍属 M5。
+当前 rev 3 已落地基础能力：`infra/source_probe` 可以返回 `headless_required`；
+`infra/render/decision.py` 负责合规判定；`RendererPool` 支持可注入 backend 与并发
+预算；`CrawlEngine` 只在 adapter 明确 `should_render` / `render_mode=headless`
+或静态解析失败 fallback 时调用 renderer。默认 `RENDER_POOL_ENABLED=false`，不会
+静默启动浏览器。真实 Playwright 浏览器、render queue/backpressure 与无限滚动
+仍属 M5 后续任务。
 
 ## 2. 原则
 
@@ -71,7 +74,7 @@ infra/render/
 ├── decision.py              通用 render 判定（业务 adapter 可追加信号）
 ├── pool.py                  RendererPool 协议 + 资源预算
 ├── playwright_backend.py    Playwright 实现
-├── queue.py                 单进程 render queue + backlog 回压
+├── queue.py                 单进程 render queue + backlog 回压（M5 后续）
 └── config.py                保守默认值与环境变量读取
 ```
 
@@ -117,14 +120,12 @@ sink 仍按 `url_hash` / `content_sha256` 去重。
 | 配置 | 默认值 | 说明 |
 |---|---:|---|
 | `RENDER_POOL_ENABLED` | `false` | 未显式启用时 `render_mode=headless` 仍拒绝执行 |
-| `RENDER_MAX_CONCURRENCY` | `2` | 全局并发 page 数 |
-| `RENDER_MAX_CONTEXTS` | `2` | 浏览器 context 上限 |
-| `RENDER_PER_HOST_CONCURRENCY` | `1` | 单 host 并发 |
+| `RENDER_POOL_MAX_CONCURRENCY` | `1` | 全局并发 page 数；M5 可按观测结果上调 |
+| `RENDER_POOL_PER_HOST_CONCURRENCY` | `1` | 单 host 并发 |
 | `RENDER_QUEUE_MAX_SIZE` | `100` | 超过后低优先级 URL 进入 backpressure |
 | `RENDER_PAGE_TIMEOUT_MS` | `15000` | 单页硬超时 |
-| `RENDER_WAIT_UNTIL` | `domcontentloaded` | 默认不等到 network idle |
-| `RENDER_MAX_BYTES` | `5242880` | 单页 DOM 快照上限 5 MB |
-| `RENDER_MAX_PAGES_PER_TASK` | `min(50, task.max_pages_per_run * 0.2)` | 防止渲染吃掉任务预算 |
+| `RENDER_MAX_BYTES` | `2000000` | 单页 DOM 快照上限 2 MB |
+| `RENDER_MAX_PAGES_PER_TASK` | `min(50, task.max_pages_per_run * 0.2)` | 防止渲染吃掉任务预算（M5 queue 接入后强制） |
 
 上线策略：
 
@@ -211,5 +212,6 @@ WebUI / monitor 只展示这些指标，不直接驱动 render 决策。
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 3 | 2026-04-29 | 实现基础 render decision、保守配置、同步 RendererPool、可选 Playwright backend 包装与 CrawlEngine renderer 注入；默认 disabled，真实浏览器与 queue/backpressure 留给 M5 | `plan-20260429-render-codegen-platform` / T-20260429-1201 |
 | rev 2 | 2026-04-29 | 明确 `infra/source_probe` 是 render 前置探查能力：可输出 `headless_required` 与回放 artifact，但不启动浏览器；真正 Playwright pool 仍在 M5 | `infra-crawl-engine.md` rev 3 |
 | rev 1 | 2026-04-28 | 初稿 —— 定义 headless render pool 的触发矩阵、池化接口、预算默认值、存储回放、错误降级和观测指标；补齐 TD-008 从"backlog 阈值"到完整 infra 能力的规划 | TD-008 / `plan-20260428-render-pool-bootstrap` |

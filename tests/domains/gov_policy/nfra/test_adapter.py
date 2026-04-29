@@ -10,7 +10,7 @@ from domains.gov_policy.nfra import nfra_adapter as nfra
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-NFRA_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/nfra"
+GOLDEN_DIR = Path(__file__).parent / "fixtures"
 
 
 def test_adapter_meta_complete() -> None:
@@ -53,7 +53,7 @@ def test_build_list_url_page0() -> None:
 
 
 def test_parse_list_extracts_detail_links() -> None:
-    sample = NFRA_DIR / "nfra_golden_list_001.html"
+    sample = GOLDEN_DIR / "nfra_golden_list_001.html"
     if not sample.exists():
         pytest.skip(f"no golden list snapshot at {sample}")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -65,7 +65,7 @@ def test_parse_list_extracts_detail_links() -> None:
 
 
 def test_parse_list_emits_pagination() -> None:
-    sample = NFRA_DIR / "nfra_golden_list_001.html"
+    sample = GOLDEN_DIR / "nfra_golden_list_001.html"
     if not sample.exists():
         pytest.skip("no golden list snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -74,7 +74,7 @@ def test_parse_list_emits_pagination() -> None:
 
 
 def test_parse_detail_extracts_title_and_body() -> None:
-    sample = NFRA_DIR / "nfra_golden_detail_001.html"
+    sample = GOLDEN_DIR / "nfra_golden_detail_001.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -91,7 +91,7 @@ def test_parse_detail_extracts_title_and_body() -> None:
 
 
 def test_parse_detail_extracts_attachments() -> None:
-    sample = NFRA_DIR / "nfra_golden_detail_001.html"
+    sample = GOLDEN_DIR / "nfra_golden_detail_001.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -103,7 +103,7 @@ def test_parse_detail_extracts_attachments() -> None:
 
 
 def test_parse_detail_extracts_interpret_links() -> None:
-    sample = NFRA_DIR / "nfra_golden_detail_001.html"
+    sample = GOLDEN_DIR / "nfra_golden_detail_001.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")

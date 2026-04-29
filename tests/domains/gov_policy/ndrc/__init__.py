@@ -1,0 +1,1 @@
+"""NDRC adapter test package."""
