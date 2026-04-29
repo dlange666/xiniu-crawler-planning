@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>烯牛政策爬虫平台 · 项目介绍</title>
+<style>
+  @page { size: A4; margin: 18mm 18mm 16mm 18mm; }
+  html, body { font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #222; line-height: 1.7; font-size: 10.3pt; margin: 0; }
+  h1 { font-size: 22pt; color: #1a3a6c; border-bottom: 3px solid #1a3a6c; padding-bottom: 8px; margin: 0 0 6px; }
+  h2 { font-size: 13.5pt; color: #1a3a6c; margin: 28px 0 10px; border-left: 4px solid #1a3a6c; padding-left: 10px; }
+  h3 { font-size: 11pt; color: #2c5599; margin: 16px 0 6px; }
+  p { margin: 8px 0; text-align: justify; }
+  ul, ol { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .lead { font-size: 10.5pt; color: #333; background: #f3f6fb; padding: 12px 16px; border-radius: 5px; border-left: 4px solid #1a3a6c; margin: 12px 0 16px; }
+  .meta { color: #666; font-size: 9pt; margin: 0 0 16px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 9.8pt; }
+  th, td { border: 1px solid #cdd5e0; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eef2f8; color: #1a3a6c; font-weight: 600; }
+  .ascii { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.9pt; line-height: 1.55; background: #fafbfd; border: 1px solid #d8deea; border-radius: 5px; padding: 10px 12px; white-space: pre; overflow-x: auto; color: #1f2937; margin: 10px 0 14px; }
+  .figure { margin: 14px 0 18px; page-break-inside: avoid; }
+  .figure svg { display: block; background: #fff; border: 1px solid #d8deea; border-radius: 6px; padding: 10px 6px; }
+  .cap { font-size: 9pt; color: #666; text-align: center; margin-top: 8px; }
+  .pipeline { background: #fafbfd; border: 1px solid #d8deea; border-radius: 5px; padding: 10px 14px; margin: 10px 0 14px; font-size: 9.8pt; }
+  .pipeline strong { color: #1a3a6c; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 14px; }
+  .card { background: #fafbfd; border: 1px solid #d8deea; border-radius: 5px; padding: 12px 14px; }
+  .card h3 { margin-top: 0; }
+  .tag { display: inline-block; background: #eef2f8; color: #1a3a6c; padding: 0 6px; border-radius: 8px; font-size: 9pt; margin-right: 3px; }
+  .footer { margin-top: 14px; color: #888; font-size: 8.5pt; text-align: center; border-top: 1px solid #ddd; padding-top: 6px; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9.3pt; background: #eef2f8; padding: 0 4px; border-radius: 3px; color: #1a3a6c; }
+  .nobreak { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>烯牛政策爬虫平台</h1>
+<p class="meta">项目介绍 · 面向非技术读者 · 2026-04-29</p>
+
+<p class="lead">
+本项目是"烯牛政策图谱"的<strong>采集与结构化基座</strong>：把分散在中央、国务院、各部委以及 31 省市自治区门户上的产业政策，自动、可追溯地汇集起来，原稿一字不落地留存，再用 AI 拆解为<strong>标准 36 字段 JSON</strong>，最终服务于 LP/GP、银行、券商、企业战投与研究机构的"检索 + 解读 + 统计 + 对比 + 推送"。
+</p>
+
+<h2>1. 项目要解决的问题</h2>
+<div class="grid2">
+  <div class="card nobreak">
+    <h3>痛点</h3>
+    <ul>
+      <li>政策来源分散在 100+ 网站，版面与字段各异</li>
+      <li>政策正文、附件、元信息不统一，难检索难比对</li>
+      <li>人工运营无法保证覆盖与时效</li>
+      <li>合规与原稿可追溯性是金融客户的硬性要求</li>
+    </ul>
+  </div>
+  <div class="card nobreak">
+    <h3>交付物</h3>
+    <ul>
+      <li><strong>稳定可订阅</strong>的政策数据流</li>
+      <li><strong>100% 可回放</strong>的原始页与附件</li>
+      <li><strong>36 字段标准 JSON</strong>（元数据 / 实体内容 / 标签）</li>
+      <li><strong>可审计</strong>：每个字段都能追到原稿与抓取批次</li>
+    </ul>
+  </div>
+</div>
+
+<h3>核心指标（MVP 门槛）</h3>
+<table>
+  <tr><th>维度</th><th>指标</th><th>门槛</th><th>维度</th><th>指标</th><th>门槛</th></tr>
+  <tr><td>覆盖</td><td>第一阶段入口</td><td>≥ 105 个</td><td>解析</td><td>JSON schema 合格率</td><td>≥ 90%</td></tr>
+  <tr><td>鲜度</td><td>发布到入库 P95</td><td>&lt; 24h</td><td>礼貌</td><td>host 维度 429/5xx</td><td>&lt; 1%</td></tr>
+  <tr><td>保真</td><td>原始页可回放</td><td>= 100%</td><td>合规</td><td>反爬命中后绕过</td><td>= 0%</td></tr>
+</table>
+
+<h2>2. 总体架构：双平面设计</h2>
+<p>系统由<strong>"代码生成平面"</strong>与<strong>"执行平面"</strong>组成，两者通过同一个 Git 仓库串联——<strong>代码合并即上线</strong>。这种结构让"为新网站写适配器"这件繁琐的事可以由 AI 编程代理自动完成，而真正的抓取主路径仍是确定性代码，AI 不进入每一次请求。</p>
+
+<div class="figure">
+<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a3a6c"/>
+    </marker>
+    <style>
+      .lbl  { font: 12px -apple-system,"PingFang SC",sans-serif; fill:#1f2937; }
+      .lblw { font: 12px -apple-system,"PingFang SC",sans-serif; fill:#fff; }
+      .ttl  { font: bold 12.5px -apple-system,"PingFang SC",sans-serif; fill:#1a3a6c; }
+      .sub  { font: 10px -apple-system,"PingFang SC",sans-serif; fill:#4b5563; }
+      .edge { stroke:#1a3a6c; stroke-width:1.6; fill:none; }
+      .plane{ fill:#fafbfd; stroke:#1a3a6c; stroke-width:1.3; }
+      .box  { fill:#eef2f8; stroke:#2c5599; stroke-width:1; rx:6; ry:6; }
+      .dark { fill:#1a3a6c; stroke:#1a3a6c; rx:6; ry:6; }
+    </style>
+  </defs>
+
+  <!-- Code-Gen Plane -->
+  <rect class="plane" x="20" y="20" width="680" height="100" rx="8"/>
+  <text class="ttl" x="36" y="42">① Code-Gen Plane（离线 · 自动写适配器）</text>
+
+  <rect class="box" x="50"  y="60" width="150" height="42"/>
+  <text class="lbl" x="125" y="86" text-anchor="middle">Coding Agent</text>
+
+  <rect class="box" x="265" y="60" width="170" height="42"/>
+  <text class="lbl" x="350" y="86" text-anchor="middle">Verification Harness</text>
+
+  <rect class="dark" x="500" y="60" width="170" height="42"/>
+  <text class="lblw" x="585" y="86" text-anchor="middle">PR 审查 → merge</text>
+
+  <line class="edge" x1="200" y1="81" x2="265" y2="81" marker-end="url(#arr)"/>
+  <line class="edge" x1="435" y1="81" x2="500" y2="81" marker-end="url(#arr)"/>
+
+  <!-- Bridge -->
+  <line class="edge" x1="585" y1="102" x2="585" y2="148" marker-end="url(#arr)"/>
+  <text class="sub" x="595" y="128">已合并 adapter</text>
+
+  <!-- Execution Plane -->
+  <rect class="plane" x="20" y="148" width="680" height="112" rx="8"/>
+  <text class="ttl" x="36" y="170">② Execution Plane（在线 · 真正抓取入库）</text>
+
+  <rect class="box" x="50"  y="188" width="120" height="42"/>
+  <text class="lbl" x="110" y="214" text-anchor="middle">调度 + 队列</text>
+
+  <rect class="box" x="200" y="188" width="100" height="42"/>
+  <text class="lbl" x="250" y="214" text-anchor="middle">下载</text>
+
+  <rect class="box" x="330" y="188" width="100" height="42"/>
+  <text class="lbl" x="380" y="214" text-anchor="middle">解析 + 去重</text>
+
+  <rect class="box" x="460" y="188" width="100" height="42"/>
+  <text class="lbl" x="510" y="214" text-anchor="middle">AI 抽取</text>
+
+  <rect class="dark" x="590" y="188" width="90" height="42"/>
+  <text class="lblw" x="635" y="207" text-anchor="middle">入库</text>
+  <text class="sub" x="635" y="222" text-anchor="middle" style="fill:#cfd9eb;">PolarDB · OSS</text>
+
+  <line class="edge" x1="170" y1="209" x2="200" y2="209" marker-end="url(#arr)"/>
+  <line class="edge" x1="300" y1="209" x2="330" y2="209" marker-end="url(#arr)"/>
+  <line class="edge" x1="430" y1="209" x2="460" y2="209" marker-end="url(#arr)"/>
+  <line class="edge" x1="560" y1="209" x2="590" y2="209" marker-end="url(#arr)"/>
+</svg>
+<div class="cap">图 1 · 双平面架构：AI 在离线写适配器，在线主路径仍是确定性代码</div>
+</div>
+
+<h3>设计原则</h3>
+<ul>
+  <li><strong>控制面自研，数据面复用成熟组件</strong>——抓取/解析/存储用经过验证的库，调度与契约自己掌握。</li>
+  <li><strong>AI 只放在高不确定决策点</strong>——URL 排序、页面分类、反爬识别、字段抽取；规则优先，AI 兜底。</li>
+  <li><strong>抓取层级递进</strong>：feed/sitemap → 静态 HTML → 接口拦截（JSON/GraphQL）→ SSR/DOM → headless 渲染（按需）。命中信号才升级。</li>
+  <li><strong>原始与解析分离</strong>：所有原始字节 + HTTP 元数据落 OSS，可任意回放；解析层独立演进，不影响原稿。</li>
+</ul>
+
+<h2>3. 一条政策的生命周期</h2>
+<div class="figure">
+<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1a3a6c"/>
+    </marker>
+    <style>
+      .lbl  { font: 12px -apple-system,"PingFang SC",sans-serif; fill:#1f2937; }
+      .sub  { font: 10px -apple-system,"PingFang SC",sans-serif; fill:#4b5563; }
+      .lblw { font: 12px -apple-system,"PingFang SC",sans-serif; fill:#fff; }
+      .edge { stroke:#1a3a6c; stroke-width:1.6; fill:none; }
+      .box  { fill:#eef2f8; stroke:#2c5599; stroke-width:1; rx:6; ry:6; }
+      .store{ fill:#1a3a6c; stroke:#1a3a6c; rx:6; ry:6; }
+    </style>
+  </defs>
+
+  <!-- 主链路：5 步 -->
+  <rect class="box" x="30"  y="50" width="100" height="44"/>
+  <text class="lbl" x="80"  y="78" text-anchor="middle">下载</text>
+
+  <rect class="box" x="170" y="50" width="100" height="44"/>
+  <text class="lbl" x="220" y="78" text-anchor="middle">解析</text>
+
+  <rect class="box" x="310" y="50" width="100" height="44"/>
+  <text class="lbl" x="360" y="78" text-anchor="middle">去重</text>
+
+  <rect class="box" x="450" y="50" width="100" height="44"/>
+  <text class="lbl" x="500" y="72" text-anchor="middle">AI 抽取</text>
+  <text class="sub" x="500" y="86" text-anchor="middle">36 字段 JSON</text>
+
+  <rect class="box" x="590" y="50" width="100" height="44"/>
+  <text class="lbl" x="640" y="78" text-anchor="middle">入库</text>
+
+  <line class="edge" x1="130" y1="72" x2="170" y2="72" marker-end="url(#arr2)"/>
+  <line class="edge" x1="270" y1="72" x2="310" y2="72" marker-end="url(#arr2)"/>
+  <line class="edge" x1="410" y1="72" x2="450" y2="72" marker-end="url(#arr2)"/>
+  <line class="edge" x1="550" y1="72" x2="590" y2="72" marker-end="url(#arr2)"/>
+
+  <!-- 双存储分支 -->
+  <rect class="store" x="30"  y="160" width="280" height="40"/>
+  <text class="lblw" x="170" y="186" text-anchor="middle">OSS · 原始字节 + 附件</text>
+
+  <rect class="store" x="410" y="160" width="280" height="40"/>
+  <text class="lblw" x="550" y="186" text-anchor="middle">PolarDB · 结构化元数据</text>
+
+  <line class="edge" x1="80"  y1="94" x2="170" y2="160" marker-end="url(#arr2)"/>
+  <line class="edge" x1="640" y1="94" x2="550" y2="160" marker-end="url(#arr2)"/>
+
+  <text class="sub" x="125" y="118" text-anchor="middle">原稿落盘 · 100% 可回放</text>
+  <text class="sub" x="595" y="118" text-anchor="middle">36 字段 · 可检索可比对</text>
+</svg>
+<div class="cap">图 2 · 一条政策的生命周期：主链路 5 步，原稿与结构化数据分别归档</div>
+</div>
+<ol>
+  <li><strong>提交种子</strong>：人工或定时任务给出网站入口 URL。</li>
+  <li><strong>礼貌下载</strong>：以 host 为最小限速单元，遵守 robots、Retry-After，遇 429/503 走"Retry-After 优先 + 指数退避 + 抖动 + cooldown"。</li>
+  <li><strong>原稿落盘</strong>：原始字节直接写 OSS，附件优先按文件名展示。</li>
+  <li><strong>解析</strong>：调用该 host 对应 adapter，输出列表/详情结构（标题、正文、发布日期、附件）。</li>
+  <li><strong>去重</strong>：以 <code>content_sha256</code> 严格去重；simhash 仅作相似聚类信号，<strong>不自动合并</strong>。</li>
+  <li><strong>AI 抽取</strong>：将正文 + 网页元数据交给 LLM，输出 36 字段标准 JSON 并校验 schema。</li>
+  <li><strong>入库</strong>：元数据进 PolarDB，原稿留 OSS，可随时回放与审计。</li>
+</ol>
+
+<h2>4. 关键能力模块</h2>
+<table>
+  <tr><th>能力域</th><th>主要 Spec</th><th>代码落点</th><th>状态</th></tr>
+  <tr><td>通用爬虫引擎（BFS/DFS · 递归发现 · 翻页）</td><td>infra-crawl-engine</td><td><code>infra/crawl/</code></td><td>MVP 已实现核心</td></tr>
+  <tr><td>限流 / 重试 / robots / 反爬识别 / warm-up</td><td>infra-fetch-policy</td><td><code>infra/http · robots · frontier</code></td><td>MVP 实施</td></tr>
+  <tr><td>政策业务规格（采集对象 / 6 类数据 / 36 字段）</td><td>domain-gov-policy</td><td><code>domains/gov_policy/adapters · seeds · golden</code></td><td>MVP 实施</td></tr>
+  <tr><td>数据模型（21 张表 DDL 唯一权威源）</td><td>data-model</td><td><code>infra/storage/</code></td><td>MVP 实施</td></tr>
+  <tr><td>WebUI（任务后台 + 采集监控 + 结果浏览）</td><td>webui</td><td><code>webui/ + webui/frontend/</code></td><td>React 重写中</td></tr>
+  <tr><td>Codegen · adapter 输出契约</td><td>codegen-output-contract</td><td><code>infra/agent · harness · adapter_registry</code></td><td>M3.5 实施</td></tr>
+  <tr><td>Codegen · 自动合并安全网（tier / canary / 回滚）</td><td>codegen-auto-merge</td><td><code>infra/sandbox · scheduler · codegen</code></td><td>M3.5 实施</td></tr>
+  <tr><td>Headless 渲染池</td><td>infra-render-pool</td><td><code>infra/render/</code></td><td>M5 暂缓</td></tr>
+  <tr><td>韧性（增量 / checkpoint / DLQ / 心跳）</td><td>infra-resilience</td><td><code>infra/checkpoint · version_guard</code></td><td>暂缓</td></tr>
+  <tr><td>可观测（指标 / 告警 / 成本）</td><td>infra-observability</td><td><code>infra/observability · ai/budget</code></td><td>暂缓</td></tr>
+  <tr><td>部署（主从分布 / 自建分发）</td><td>infra-deployment</td><td><code>infra/dispatch/</code></td><td>MVP 单进程，扩展期升级</td></tr>
+</table>
+
+<h2>5. 业务规格摘要：政策数据是什么样的</h2>
+<div class="grid2">
+  <div class="card nobreak">
+    <h3>第一阶段采集范围</h3>
+    <ul>
+      <li><strong>中央行政机关</strong>：国务院政策文件库 + 要闻</li>
+      <li><strong>国务院部委</strong>：发改委、工信部、财政部、金融监管总局、证监会、国资委、人民银行等 8 类</li>
+      <li><strong>地方机关</strong>：31 省市自治区"信息公开 + 要闻 + 政策解读"约 90 个 URL</li>
+      <li><strong>引用</strong>：国家法律法规数据库（仅跳转，不打标签）</li>
+      <li><strong>后期补齐</strong>：金融交易所、行业协会</li>
+    </ul>
+  </div>
+  <div class="card nobreak">
+    <h3>每条政策的三个组成部分</h3>
+    <ol>
+      <li><strong>元数据表格</strong>：网页自带的属性表</li>
+      <li><strong>正文</strong>：政策主体文本</li>
+      <li><strong>附件</strong>：PDF 等原始字节（本期不做 PDF→文本）</li>
+    </ol>
+    <h3 style="margin-top:8px;">36 字段 JSON 的三段结构</h3>
+    <ul>
+      <li><strong>元数据字段（15 个）</strong>：标题、发文字号、发布机关、行政区划、政策工具分类等</li>
+      <li><strong>实体内容字段（9 个）</strong>：金额、期限、对象、条件等</li>
+      <li><strong>标签字段（12 个）</strong>：行业、主题、地域映射等</li>
+    </ul>
+  </div>
+</div>
+
+<h2>6. 合规与底线（不可妥协）</h2>
+<div class="grid2">
+  <div class="card nobreak">
+    <h3>不做什么</h3>
+    <ul>
+      <li>不绕过验证码 / 登录 / 付费墙 / 技术 challenge</li>
+      <li>不使用专为绕过保护设计的工具或库</li>
+      <li>不对 robots 明示拒绝的路径继续抓取（5xx 视为完全禁止）</li>
+      <li>默认不抽身份证号、手机号、邮箱等敏感字段</li>
+    </ul>
+  </div>
+  <div class="card nobreak">
+    <h3>怎么做</h3>
+    <ul>
+      <li>识别异常 → 降速 / 暂停 / 人工审核</li>
+      <li>每个采集任务必须填写：用途、责任人、范围</li>
+      <li>从设计起预留 删除 / TTL 链路</li>
+      <li>warm-up 分级：新 host 按 10%/30%/60%/100% 阶梯放量，反爬命中即降到 L0+cooldown</li>
+    </ul>
+  </div>
+</div>
+
+<h2>7. 仓库结构与工程方法</h2>
+<p>项目采用 <strong>"单仓 + 文档先行 + 轻量 DDD + 规格驱动开发（SDD）"</strong> 模式，规格、计划、代码、评估证据全部在同一仓库内闭环，方便审计与回放。</p>
+<div class="ascii">xiniu-crawler/
+├── docs/                    控制面（架构、规格、计划、任务、评估）
+│   ├── prod-spec/           12 份长期规格（业务 + infra + codegen）
+│   ├── exec-plan/active/    当前执行计划（MVP / codegen-bootstrap / WebUI）
+│   ├── task/                active/completed/archive 工作流目录
+│   ├── prd/  research/      产品原稿与工程视角研究底稿
+│   └── eval-test/           评估与回放证据
+├── domains/<context>/       业务代码（按 bounded context）
+│   └── gov_policy/          adapters · seeds · golden
+├── infra/                   跨业务复用的技术能力（不含业务规则）
+│   ├── crawl/  http/  robots/  frontier/  storage/
+│   └── adapter_registry/    （在建：agent · sandbox · harness · codegen）
+├── webui/                   FastAPI + React + Ant Design ProComponents
+├── scripts/                 仓库级 CLI 入口
+└── runtime/                 本地运行时（SQLite / 抓取缓存，gitignore）</div>
+<h3>工作流：每一次改动都走"规格 → 计划 → 任务 → 代码 → 证据"</h3>
+<ul>
+  <li><strong>Planner</strong> 锁定上下文与作用域，更新 spec，输出已批准的计划</li>
+  <li><strong>Generator</strong> 实现单个原子任务，更新触达的文档与测试</li>
+  <li><strong>Evaluator</strong> 独立验证，记录 green/red 证据，关闭任务状态</li>
+  <li><strong>Cleaner</strong> 例行整洁、归档噪声，把非紧急债务推后</li>
+</ul>
+<p>分支命名 <code>agent/&lt;type&gt;-YYYYMMDD-&lt;topic&gt;</code>，任务 ID <code>T-YYYYMMDD-NNN</code>，<strong>一支分支 → 一个活跃任务 → 一个 PR</strong>。</p>
+
+<h2>8. 当前进展与里程碑</h2>
+<table>
+  <tr><th>里程碑</th><th>内容</th><th>状态</th></tr>
+  <tr><td>M0</td><td>项目骨架与工作流闭环</td><td>已完成</td></tr>
+  <tr><td>M1</td><td>单源跑通 —— 国务院文件库静态抓取 + 原稿落盘</td><td>实施中</td></tr>
+  <tr><td>M2</td><td>多源 —— 8 个国务院部委 + 解析层去重</td><td>计划中</td></tr>
+  <tr><td>M3</td><td>AI 结构化 —— 36 字段 prompt → JSON 入库</td><td>计划中</td></tr>
+  <tr><td>M3.5</td><td>Codegen 平台 —— AI 自动写适配器、加压验证、分级合并</td><td>实施中</td></tr>
+  <tr><td>WebUI</td><td>任务后台 + 采集监控 + 结果浏览（React + Ant Design ProComponents）</td><td>重写中</td></tr>
+  <tr><td>M5</td><td>渲染池 / 韧性 / 可观测 / 主从部署</td><td>已 spec 化，按需提升</td></tr>
+</table>
+
+<p class="lead">
+<strong>价值主张：</strong>我们交付的不是又一份"政策搜索结果"，而是一份
+<strong>稳定、可回放、可审计、可订阅</strong>的政策数据资产 ——
+让所有依赖政策做决策的人，第一时间拿到最干净、最结构化的那份；
+让所有依赖该数据的产品，都建立在能追溯到原稿的地基之上。
+</p>
+
+<div class="footer">xiniu-crawler · 烯牛政策图谱项目 · 内部介绍材料 · 2026-04-29</div>
+
+</body>
+</html>

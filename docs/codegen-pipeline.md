@@ -200,6 +200,31 @@ green 条件：
 - PR handoff：若 green，写建议 PR 标题和 body；若 red，写下一轮动作
 - notify-message 草稿：邮件/IM 尚未接入，只写一段可复制的消息
 
+若本次任务来自 `crawl_task` / `crawl_task_execution`，wrapper 必须在 eval
+落盘后同步任务表：
+
+| 字段 | green | red / partial |
+|---|---|---|
+| `crawl_task_execution.status` | `completed` | `failed` |
+| `last_run_status` | `green` | `red` 或 `partial` |
+| `last_error_kind` | `NULL` | 见下方分类 |
+| `last_error_detail` | `NULL` | 一句话说明失败原因、入口 URL、关键 gate |
+| `last_eval_path` | 本次 eval 路径 | 本次 eval 路径 |
+| `needs_manual_review` | `0` | 需人工改 PRD seed / scope / 合规策略时为 `1` |
+
+`status` 只表示状态机位置，不要把具体站点问题扩成新状态。失败类型写
+`last_error_kind`：
+
+| error_kind | 适用场景 |
+|---|---|
+| `source_entry_unusable` | PRD/task 入口不可直接采集：入口命中 WAF、筛选页无可用详情、详情全部被 scope 拒绝 |
+| `anti_bot` | challenge / captcha / WAF / auth 等保护措施命中 |
+| `scope_mismatch` | 详情或分页在当前 scope 外，需改 `scope_mode` / allowlist / URL pattern |
+| `render_required` | 静态抓取无法获得目标内容，需要 render/headless 或 API 能力 |
+| `adapter_bug` | adapter 选择器、分页、URL 模式或解析逻辑错误 |
+| `audit_gate_failed` | live smoke 有数据但质量门失败 |
+| `infra_error` | DB、存储、网络基础设施或 wrapper 异常 |
+
 失败模板：
 
 ```markdown
@@ -207,6 +232,8 @@ green 条件：
 
 ### 5.1 整体失败信号
 - 失败步骤:
+- last_error_kind:
+- needs_manual_review:
 - audit 输出:
 - raw_records_written:
 - errors / anti_bot_events:
