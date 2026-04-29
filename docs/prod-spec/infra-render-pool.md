@@ -1,6 +1,6 @@
 # Infra Headless Render Pool · 按需浏览器渲染池
 
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：M5 暂缓（TD-008；计划见 `docs/exec-plan/deferred-plan.md#plan-20260428-render-pool-bootstrap`）。当前代码只允许 adapter 声明 `render_mode=headless`，`CrawlEngine` 会显式拒绝执行，避免误以为已支持。
 
 > 本 spec 定义 `infra/render/` 的长期契约：headless 只能作为抓取层级末档的
@@ -20,6 +20,10 @@
 
 不覆盖业务解析规则。业务域仍只通过 adapter hook 暴露 `parse_list` /
 `parse_detail` / `should_render` 等纯函数。
+
+当前 rev 2 只新增 render 前置探查能力：`infra/source_probe` 可以返回
+`headless_required`，并保留静态响应 / JSON API 发现 artifact。它不启动浏览器；
+真正的 Playwright pool 仍属 M5。
 
 ## 2. 原则
 
@@ -179,6 +183,7 @@ WebUI / monitor 只展示这些指标，不直接驱动 render 决策。
 | 关系 | spec |
 |---|---|
 | 抓取层级顺序、BFS/DFS 调度 | `docs/prod-spec/infra-crawl-engine.md` |
+| source probe 与 headless_required 判定 | `docs/prod-spec/infra-crawl-engine.md` §6.3 |
 | robots / Retry-After / anti-bot cooldown | `docs/prod-spec/infra-fetch-policy.md` |
 | checkpoint / DLQ / 版本巡检 | `docs/prod-spec/infra-resilience.md` |
 | render 指标记录 | `docs/prod-spec/infra-observability.md` |
@@ -206,4 +211,5 @@ WebUI / monitor 只展示这些指标，不直接驱动 render 决策。
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 2 | 2026-04-29 | 明确 `infra/source_probe` 是 render 前置探查能力：可输出 `headless_required` 与回放 artifact，但不启动浏览器；真正 Playwright pool 仍在 M5 | `infra-crawl-engine.md` rev 3 |
 | rev 1 | 2026-04-28 | 初稿 —— 定义 headless render pool 的触发矩阵、池化接口、预算默认值、存储回放、错误降级和观测指标；补齐 TD-008 从"backlog 阈值"到完整 infra 能力的规划 | TD-008 / `plan-20260428-render-pool-bootstrap` |

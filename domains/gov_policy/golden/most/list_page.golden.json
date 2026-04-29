@@ -1,0 +1,13 @@
+{
+  "kind": "list",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/",
+  "expected_min_detail_links": 14,
+  "expected_paths": [
+    "/fgzc/flfg/",
+    "/fgzc/bmgz/",
+    "/fgzc/gfxwj/"
+  ],
+  "excluded_paths": [
+    "/fgzc/zcjd/"
+  ]
+}
