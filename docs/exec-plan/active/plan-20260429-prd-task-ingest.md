@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-prd-task-ingest`
 - **关联规格**：`docs/prod-spec/data-model.md` §4.1.1, §4.1.3；`docs/prod-spec/domain-gov-policy.md` §2, §8
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -17,7 +17,7 @@
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-201 | [scripts] PRD 数据源收录到 crawl_task | `data-model.md` §4.1.1, §4.1.3；`domain-gov-policy.md` §2, §8 | 新增 `scripts/ingest_prd_tasks.py`：解析 PRD 中 URL，推断 host/data_kind/scope，幂等写入 `crawl_task` 与 `crawl_task_execution`；默认只触达本地 SQLite，不联网 | 单元测试覆盖 URL 清洗、data_kind 推断、幂等入库；在临时 DB 上 dry-run 与实际 insert 可复现 | `verifying` |
+| T-20260429-201 | [scripts] PRD 数据源收录到 crawl_task | `data-model.md` §4.1.1, §4.1.3；`domain-gov-policy.md` §2, §8 | 新增 `scripts/ingest_prd_tasks.py`：解析 PRD 中 URL，推断 host/data_kind/scope，幂等写入 `crawl_task` 与 `crawl_task_execution`；默认只触达本地 SQLite，不联网 | 单元测试覆盖 URL 清洗、data_kind 推断、幂等入库；在临时 DB 上 dry-run 与实际 insert 可复现；PR #7 | `completed` |
 
 ## 4. 边界护栏
 
