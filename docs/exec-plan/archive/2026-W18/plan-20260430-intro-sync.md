@@ -4,8 +4,9 @@
 
 - **Plan ID**：`plan-20260430-intro-sync`
 - **关联规格**：`docs/prod-spec/index.md`（spec 数量）；`docs/prod-spec/infra-render-pool.md`（render 状态变更）
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
+- **关联 PR**：https://github.com/dlange666/xiniu-crawler-planning/pull/26（commit f67bd23）
 
 ## 2. 目标
 
