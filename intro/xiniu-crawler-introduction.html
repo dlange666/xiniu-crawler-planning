@@ -35,7 +35,7 @@
 <body>
 
 <h1>烯牛政策爬虫平台</h1>
-<p class="meta">项目介绍 · 面向非技术读者 · 2026-04-29</p>
+<p class="meta">项目介绍</p>
 
 <p class="lead">
 本项目是"烯牛政策图谱"的<strong>采集与结构化基座</strong>：把分散在中央、国务院、各部委以及 31 省市自治区门户上的产业政策，自动、可追溯地汇集起来，原稿一字不落地留存，再用 AI 拆解为<strong>标准 36 字段 JSON</strong>，最终服务于 LP/GP、银行、券商、企业战投与研究机构的"检索 + 解读 + 统计 + 对比 + 推送"。
@@ -222,7 +222,7 @@
   <tr><td>WebUI（任务后台 + 采集监控 + 结果浏览）</td><td>webui</td><td><code>webui/ + webui/frontend/</code></td><td>React 重写中</td></tr>
   <tr><td>Codegen · adapter 输出契约</td><td>codegen-output-contract</td><td><code>infra/agent · harness · adapter_registry</code></td><td>M3.5 实施</td></tr>
   <tr><td>Codegen · 自动合并安全网（tier / canary / 回滚）</td><td>codegen-auto-merge</td><td><code>infra/sandbox · scheduler · codegen</code></td><td>M3.5 实施</td></tr>
-  <tr><td>Headless 渲染池</td><td>infra-render-pool</td><td><code>infra/render/</code></td><td>M5 暂缓</td></tr>
+  <tr><td>Headless 渲染池</td><td>infra-render-pool</td><td><code>infra/render/</code></td><td>核心已实现（随 M3.5 codegen 平台落地）</td></tr>
   <tr><td>韧性（增量 / checkpoint / DLQ / 心跳）</td><td>infra-resilience</td><td><code>infra/checkpoint · version_guard</code></td><td>暂缓</td></tr>
   <tr><td>可观测（指标 / 告警 / 成本）</td><td>infra-observability</td><td><code>infra/observability · ai/budget</code></td><td>暂缓</td></tr>
   <tr><td>部署（主从分布 / 自建分发）</td><td>infra-deployment</td><td><code>infra/dispatch/</code></td><td>MVP 单进程，扩展期升级</td></tr>
@@ -234,7 +234,7 @@
     <h3>第一阶段采集范围</h3>
     <ul>
       <li><strong>中央行政机关</strong>：国务院政策文件库 + 要闻</li>
-      <li><strong>国务院部委</strong>：发改委、工信部、财政部、金融监管总局、证监会、国资委、人民银行等 8 类</li>
+      <li><strong>国务院部委</strong>：覆盖 8 家目标（发改委 / 工信部 / 财政部 / 人民银行 / 金融监管总局 / 证监会 / 国资委 / 科技部），目前已落地 5 家适配器：ndrc / most / csrc / nfra / sasac</li>
       <li><strong>地方机关</strong>：31 省市自治区"信息公开 + 要闻 + 政策解读"约 90 个 URL</li>
       <li><strong>引用</strong>：国家法律法规数据库（仅跳转，不打标签）</li>
       <li><strong>后期补齐</strong>：金融交易所、行业协会</li>
@@ -282,16 +282,18 @@
 <p>项目采用 <strong>"单仓 + 文档先行 + 轻量 DDD + 规格驱动开发（SDD）"</strong> 模式，规格、计划、代码、评估证据全部在同一仓库内闭环，方便审计与回放。</p>
 <div class="ascii">xiniu-crawler/
 ├── docs/                    控制面（架构、规格、计划、任务、评估）
-│   ├── prod-spec/           12 份长期规格（业务 + infra + codegen）
-│   ├── exec-plan/active/    当前执行计划（MVP / codegen-bootstrap / WebUI）
+│   ├── prod-spec/           11 份长期规格（业务 + infra + codegen）
+│   ├── exec-plan/active/    当前执行计划（MVP / codegen-bootstrap / WebUI 等）
 │   ├── task/                active/completed/archive 工作流目录
 │   ├── prd/  research/      产品原稿与工程视角研究底稿
 │   └── eval-test/           评估与回放证据
 ├── domains/<context>/       业务代码（按 bounded context）
-│   └── gov_policy/          adapters · seeds · golden
+│   └── gov_policy/          按部委拆分子模块：ndrc / most / csrc / nfra / sasac，
+│                            每个子模块自带 *_adapter.py + *_seed.yaml
 ├── infra/                   跨业务复用的技术能力（不含业务规则）
-│   ├── crawl/  http/  robots/  frontier/  storage/
-│   └── adapter_registry/    （在建：agent · sandbox · harness · codegen）
+│   ├── 采集运行时           crawl / http / robots / frontier / storage / render
+│   └── codegen 平台         agent / harness / sandbox / codegen /
+│                            adapter_contract / adapter_registry / source_probe
 ├── webui/                   FastAPI + React + Ant Design ProComponents
 ├── scripts/                 仓库级 CLI 入口
 └── runtime/                 本地运行时（SQLite / 抓取缓存，gitignore）</div>
@@ -308,12 +310,12 @@
 <table>
   <tr><th>里程碑</th><th>内容</th><th>状态</th></tr>
   <tr><td>M0</td><td>项目骨架与工作流闭环</td><td>已完成</td></tr>
-  <tr><td>M1</td><td>单源跑通 —— 国务院文件库静态抓取 + 原稿落盘</td><td>实施中</td></tr>
-  <tr><td>M2</td><td>多源 —— 8 个国务院部委 + 解析层去重</td><td>计划中</td></tr>
+  <tr><td>M1</td><td>单源跑通 —— 抓取 / 解析 / 去重 / 原稿落盘的基础链路</td><td>基础完成</td></tr>
+  <tr><td>M2</td><td>多源 —— 8 个国务院部委 + 解析层去重</td><td>实施中（已落地 5/8 家：ndrc / most / csrc / nfra / sasac）</td></tr>
   <tr><td>M3</td><td>AI 结构化 —— 36 字段 prompt → JSON 入库</td><td>计划中</td></tr>
-  <tr><td>M3.5</td><td>Codegen 平台 —— AI 自动写适配器、加压验证、分级合并</td><td>实施中</td></tr>
+  <tr><td>M3.5</td><td>Codegen 平台 —— AI 自动写适配器、加压验证、分级合并；render 池一并落地</td><td>实施中</td></tr>
   <tr><td>WebUI</td><td>任务后台 + 采集监控 + 结果浏览（React + Ant Design ProComponents）</td><td>重写中</td></tr>
-  <tr><td>M5</td><td>渲染池 / 韧性 / 可观测 / 主从部署</td><td>已 spec 化，按需提升</td></tr>
+  <tr><td>M5</td><td>韧性 / 可观测 / 主从部署</td><td>已 spec 化，按需提升</td></tr>
 </table>
 
 <p class="lead">
@@ -323,7 +325,7 @@
 让所有依赖该数据的产品，都建立在能追溯到原稿的地基之上。
 </p>
 
-<div class="footer">xiniu-crawler · 烯牛政策图谱项目 · 内部介绍材料 · 2026-04-29</div>
+<div class="footer">xiniu-crawler · 烯牛政策图谱项目 · 内部介绍材料 · 2026-04-30</div>
 
 </body>
 </html>

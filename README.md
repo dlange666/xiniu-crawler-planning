@@ -14,7 +14,7 @@
 - `CLAUDE.md` —— 会话级强约束
 - `docs/architecture.md` —— 仓库级架构：分层、目录、依赖、Capability × Spec × Plan 对照表、关键决策
 - `docs/product-sense.md` —— 产品方向、核心指标、不做什么
-- `docs/prod-spec/index.md` —— 产品与基础设施规格速查（10 份 spec + 跨 spec 关系）
+- `docs/prod-spec/index.md` —— 产品与基础设施规格速查（11 份 spec + 跨 spec 关系）
 - `docs/exec-plan/active/` —— 当前执行计划（MVP + codegen-bootstrap + ROADMAP）
 - `docs/prd/` —— 产品需求文档归档（产品/业务方原稿）
 - `docs/research/` —— 工程视角研究底稿（AI-First 总体架构、codegen 设计提案）
