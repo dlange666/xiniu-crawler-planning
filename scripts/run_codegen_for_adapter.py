@@ -24,6 +24,7 @@ sonnet / 其它。
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import re
 import shutil
@@ -33,7 +34,7 @@ import sys
 import textwrap
 import time
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -334,6 +335,10 @@ def workflow_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
     return True
 
 
+def eval_artifact_path(worktree: Path, args: argparse.Namespace) -> Path:
+    return worktree / f"docs/eval-test/codegen-{slug(args.host)}-{date.today():%Y%m%d}.md"
+
+
 def golden_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
     golden_dir = (
         worktree / "domains" / args.business_context / "golden" / slug(args.host)
@@ -434,6 +439,102 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
     return res
 
 
+def record_wrapper_eval(
+    *,
+    worktree: Path,
+    args: argparse.Namespace,
+    branch: str,
+    log_file: Path,
+    opencode_rc: int | None,
+    gates: dict[str, bool],
+    overall: bool,
+    gate_error: str | None = None,
+) -> Path:
+    """Ensure wrapper-level green/red evidence is written into eval-test.
+
+    opencode is an untrusted worker: it may exit non-zero before writing eval,
+    or it may self-report partial while wrapper gates are red. The wrapper owns
+    the final gate record and must leave durable evidence in docs/eval-test.
+    """
+    eval_path = eval_artifact_path(worktree, args)
+    eval_path.parent.mkdir(parents=True, exist_ok=True)
+    verdict = "green" if overall else "red"
+    failed = [name for name, ok in gates.items() if not ok]
+    if gate_error:
+        failed.append("wrapper_exception")
+    gate_rows = "\n".join(
+        f"| {name} | {'PASS' if ok else 'FAIL'} |" for name, ok in gates.items()
+    )
+    if not gate_rows:
+        gate_rows = "| gate_not_started | FAIL |"
+    failed_text = ", ".join(failed) if failed else "none"
+    opencode_text = "not_run" if opencode_rc is None else str(opencode_rc)
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
+    relative_log = log_file
+    with contextlib.suppress(ValueError):
+        relative_log = log_file.relative_to(REPO)
+
+    wrapper_section = textwrap.dedent(f"""\
+
+        ## Wrapper Gate Result
+
+        > **作者**：codegen wrapper
+        > **时间**：{timestamp}
+        > **最终判定**：`{verdict}`
+
+        | Gate | Result |
+        |---|---|
+        {gate_rows}
+
+        | 项 | 值 |
+        |---|---|
+        | host | `{args.host}` |
+        | branch | `{branch}` |
+        | opencode_exit_code | `{opencode_text}` |
+        | failed_gates | `{failed_text}` |
+        | codegen_log | `{relative_log}` |
+        | worktree | `{worktree}` |
+        """)
+    if gate_error:
+        wrapper_section += f"\nWrapper exception: `{gate_error}`\n"
+
+    if eval_path.exists():
+        current = eval_path.read_text(encoding="utf-8")
+        if "## Wrapper Gate Result" not in current:
+            eval_path.write_text(current.rstrip() + "\n" + wrapper_section, encoding="utf-8")
+        return eval_path
+
+    title = f"# Codegen {slug(args.host)} Wrapper Eval"
+    body = textwrap.dedent(f"""\
+        {title}
+
+        > **类型**：`acceptance-report`
+        > **关联**：codegen wrapper / host `{args.host}`
+        > **验证 spec**：`codegen-output-contract.md` §3.1
+        > **作者**：codegen wrapper
+        > **日期**：{date.today():%Y-%m-%d}
+        > **判定**：`{verdict}`
+
+        ## 1. 背景与目的
+
+        opencode 未产出 eval 或未能完成可靠收口；wrapper 根据确定性 gates
+        自动补写本记录，确保 red/green 结果至少沉淀到 `docs/eval-test/`。
+
+        ## 2. 复现线索
+
+        - worktree: `{worktree}`
+        - branch: `{branch}`
+        - codegen log: `{relative_log}`
+
+        ## 3. 结论
+
+        - **判定**：`{verdict}`
+        - **失败 gates**：`{failed_text}`
+        """)
+    eval_path.write_text(body.rstrip() + "\n" + wrapper_section, encoding="utf-8")
+    return eval_path
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--host", help="例：www.most.gov.cn；--from-task-db 模式下自动填充")
@@ -511,23 +612,42 @@ def main() -> int:
         sys.exit(f"missing codegen pipeline file: {PIPELINE}")
 
     overall = False
+    gates: dict[str, bool] = {}
+    opencode_rc: int | None = None
+    gate_error: str | None = None
     try:
         if not args.skip_codegen:
             setup_worktree(worktree, branch, args.force)
             write_per_task_prompt(worktree, args)
-            rc = invoke_opencode(worktree, args.model, log_file)
-            print(f"\n[codegen] opencode exit code: {rc}")
-            if rc != 0:
+            opencode_rc = invoke_opencode(worktree, args.model, log_file)
+            print(f"\n[codegen] opencode exit code: {opencode_rc}")
+            if opencode_rc != 0:
                 print("opencode 失败；worktree 留存供人工查 → ", worktree)
 
         # 跑验收门，无论 opencode 退出码如何（agent 退出码不可信）
         print("\n=== 验收门 ===")
-        gates = run_gates(worktree, args, args.smoke_task_id)
+        try:
+            gates = run_gates(worktree, args, args.smoke_task_id)
+        except Exception as e:  # noqa: BLE001
+            gate_error = f"{type(e).__name__}: {e}"
+            gates = {"wrapper_exception": False}
+            print(f"[gate] wrapper exception: {gate_error}")
         print("\n=== gate 结果 ===")
         for name, ok in gates.items():
             print(f"  {name:14s}: {'PASS' if ok else 'FAIL'}")
 
         overall = all(gates.values())
+        eval_path = record_wrapper_eval(
+            worktree=worktree,
+            args=args,
+            branch=branch,
+            log_file=log_file,
+            opencode_rc=opencode_rc,
+            gates=gates,
+            overall=overall,
+            gate_error=gate_error,
+        )
+        print(f"[eval] wrapper evidence: {eval_path}")
     finally:
         if claimed_task is not None:
             mark_codegen_task_finished(
