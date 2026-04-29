@@ -62,7 +62,8 @@ uv run pytest tests/ -q
 | 事项 | 落点 |
 |---|---|
 | 调整 audit profile / `body_100_rate` | 后续质量门任务 |
-| 关闭哪些 task / plan | 验证通过并创建 PR 后关闭 `T-20260429-501` |
+| 关闭哪些 task / plan | 已关闭 `T-20260429-501` 与 `plan-20260429-codegen-red-eval` |
+| PR | https://github.com/dlange666/xiniu-crawler-planning/pull/10 |
 
 ## 修订历史
 

@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-codegen-red-eval`
 - **关联规格**：`docs/prod-spec/codegen-output-contract.md` §3.1；`docs/codegen-pipeline.md` §4.6
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -17,7 +17,7 @@
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-501 | [scripts/codegen] red 结果强制写 eval-test 证据 | `codegen-output-contract.md` §3.1；`codegen-pipeline.md` §4.6 | `run_codegen_for_adapter.py` 在 gates 后创建或追加 wrapper eval；记录最终判定、gate 表、失败 gate、opencode exit code、log/worktree/branch | 单测覆盖缺失 eval 自动创建、已有 eval 追加 wrapper 结果；runner 单测、ruff、py_compile 通过 | `verifying` |
+| T-20260429-501 | [scripts/codegen] red 结果强制写 eval-test 证据 | `codegen-output-contract.md` §3.1；`codegen-pipeline.md` §4.6 | `run_codegen_for_adapter.py` 在 gates 后创建或追加 wrapper eval；记录最终判定、gate 表、失败 gate、opencode exit code、log/worktree/branch | 单测覆盖缺失 eval 自动创建、已有 eval 追加 wrapper 结果；runner 单测、ruff、py_compile、全量 pytest 通过；PR #10 | `completed` |
 
 ## 4. 边界护栏
 
