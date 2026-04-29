@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "让 codegen 脚本从 crawl_task 表自动领取任务并驱动 opencode + gates 完成单任务执行。",
+  "pr_name": "codegen-task-runner",
+  "branch": "agent/feature-20260429-codegen-task-runner",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-301",
+      "title": "[scripts/codegen] 从 crawl_task 自动 claim 并执行",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-task-runner",
+      "spec_ref": "data-model.md §4.1.1, §4.1.3；codegen-output-contract.md §3.1",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T14:15:00+08:00",
+      "notes": "已为 run_codegen_for_adapter.py 增加 --from-task-db 模式：从本地 SQLite crawl_task/crawl_task_execution 原子领取 scheduled 任务，自动派生 host/entry_url/scope，gates 后标记 completed/failed。验证：uv run pytest tests/infra/test_codegen_task_runner.py -q -> 4 passed；uv run ruff check scripts/run_codegen_for_adapter.py tests/infra/test_codegen_task_runner.py -> passed；uv run pytest tests/ -q -> 85 passed。PR：https://github.com/dlange666/xiniu-crawler-planning/pull/8。"
+    }
+  ]
+}
