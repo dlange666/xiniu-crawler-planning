@@ -4,8 +4,9 @@
 host: www.ndrc.gov.cn
 business_context: gov_policy
 data_kind: policy
+scope_mode: same_origin
 politeness_rps: 0.3       # 仅向下覆盖默认 1.0（更保守）
-max_pages_per_run: 3     # MVP：抓首页前 20 条详情
+max_pages_per_run: 5
 crawl_mode: full
 entry_urls:
   - https://www.ndrc.gov.cn/xxgk/zcfb/fzggwl/   # 发展改革委令

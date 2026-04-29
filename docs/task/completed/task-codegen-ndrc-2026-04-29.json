@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "为 www.ndrc.gov.cn 发展改革委令栏目补齐 codegen 采集适配器交付物与验收证据。",
+  "pr_name": "codegen-ndrc",
+  "branch": "agent/feature-20260429-codegen-ndrc-t4",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-101",
+      "title": "codegen-ndrc: 站点探查",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": [],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "probe verdict=static_html；robots 403 按 RFC 9309 视作无 robots，全允许。"
+    },
+    {
+      "id": "T-20260429-102",
+      "title": "codegen-ndrc: 复用并验证 adapter",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-101"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "现有 ndrc adapter 通过 registry 与 parse_list/parse_detail 单测。"
+    },
+    {
+      "id": "T-20260429-103",
+      "title": "codegen-ndrc: 更新 seed",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-102"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "seed 明确 scope_mode=same_origin；保留 politeness_rps=0.3。"
+    },
+    {
+      "id": "T-20260429-104",
+      "title": "codegen-ndrc: 采集 golden 样本",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-102"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "已补齐 5 个 HTML 与 5 个 .golden.json。"
+    },
+    {
+      "id": "T-20260429-105",
+      "title": "codegen-ndrc: 跑测试",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-104"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "uv run pytest tests/gov_policy/test_adapter_ndrc.py -v -> 7 passed；uv run pytest tests/ -q -> 89 passed。"
+    },
+    {
+      "id": "T-20260429-106",
+      "title": "codegen-ndrc: live smoke",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-105"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "清库后 smoke：raw_records_written=20，errors=0，anti_bot_events=0。"
+    },
+    {
+      "id": "T-20260429-107",
+      "title": "codegen-ndrc: 写 eval 并判定",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-106"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:09:00+08:00",
+      "notes": "按 attachment-first 阈值 audit PASS；eval 判定 green。"
+    },
+    {
+      "id": "T-20260429-108",
+      "title": "codegen-ndrc: PR handoff",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-ndrc",
+      "dependency": ["T-20260429-107"],
+      "assignee": "agent",
+      "last_updated": "2026-04-29T14:10:57+08:00",
+      "notes": "Draft PR 已创建：https://github.com/dlange666/xiniu-crawler-planning/pull/11。"
+    }
+  ]
+}
