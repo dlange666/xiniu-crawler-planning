@@ -15,7 +15,7 @@ VIEWER = Depends(require_role("viewer"))
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request, user: User = VIEWER):
-    tasks = request.app.state.task_store.list_tasks(limit=20)
+    tasks = request.app.state.task_store.list_tasks(limit=20)["items"]
     return request.app.state.templates.TemplateResponse(
         request, "monitor/index.html", {"user": user, "tasks": tasks}
     )
@@ -61,7 +61,7 @@ def api_adapters(user: User = VIEWER):
 
 @router.get("/hosts", response_class=HTMLResponse)
 def hosts(request: Request, user: User = VIEWER):
-    tasks = request.app.state.task_store.list_tasks(limit=100)
+    tasks = request.app.state.task_store.list_tasks(limit=100)["items"]
     hosts = sorted({t["host"] for t in tasks})
     return request.app.state.templates.TemplateResponse(
         request, "monitor/hosts.html", {"user": user, "hosts": hosts}
