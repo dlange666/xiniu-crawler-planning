@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "迁移 domains 下旧的横向 adapter/seed/golden 目录为按 source 聚合的新规则。",
+  "pr_name": "domain-source-layout",
+  "branch": "agent/infra-20260429-codegen-json-contract",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-801",
+      "title": "[domains/gov_policy] source 聚合目录迁移",
+      "status": "completed",
+      "plan_id": "plan-20260429-domain-source-layout",
+      "spec_ref": "codegen-output-contract.md §2；domain-gov-policy.md §8",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T23:25:00+08:00",
+      "notes": "迁移 NDRC adapter/seed/golden 到 domains/gov_policy/ndrc/；更新 registry、codegen wrapper、测试与 active spec 引用。验证：targeted 37 passed；full tests 95 passed；ruff、py_compile、diff --check 均通过。"
+    }
+  ]
+}

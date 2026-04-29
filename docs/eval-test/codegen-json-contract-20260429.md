@@ -45,10 +45,10 @@ git diff --check
 
 | Gate | 结果 |
 |---|---|
-| codegen task runner 单测 | `green`：11 passed |
+| codegen task runner 单测 | `green`：12 passed |
 | ruff | `green`：All checks passed |
 | py_compile | `green`：exit 0 |
-| 全量测试 | `green`：93 passed |
+| 全量测试 | `green`：95 passed |
 | diff whitespace | `green`：无输出 |
 
 ## 5. 覆盖点
@@ -62,6 +62,7 @@ git diff --check
 | wrapper gates | `run_gates` 增加 `task_json` 结果 |
 | adapter 命名 | `wap.miit.gov.cn -> miit`，避免 `wap.py` 这类通用渠道名 |
 | audit 默认门 | 默认正文长度门使用 `body_100_rate`，`body_500_rate` 降为观测指标 |
+| domain source layout | codegen 产物路径使用 `domains/<context>/<source>/<source>_*`，registry 发现新路径并兼容旧 adapter 目录 |
 
 ## 6. 结论与决策
 

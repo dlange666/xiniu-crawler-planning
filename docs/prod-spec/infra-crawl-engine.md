@@ -228,7 +228,7 @@ def parse_list(html, url):
 ## 11. 验收点
 
 - 单元：见 `tests/infra/{test_strategies, test_scope, test_pagination_helpers, test_dedup}.py`（共 ~17 用例）
-- 黄金：`tests/gov_policy/test_adapter_ndrc.py::test_parse_list_emits_pagination`（验证 createPageHTML 解析）
+- 黄金：`tests/gov_policy/test_ndrc_adapter.py::test_parse_list_emits_pagination`（验证 createPageHTML 解析）
 - 端到端：`scripts/run_crawl_task.py` 配 `--max-depth=2 --max-pages=15+` 跑 NDRC，期望 9 list + 数条 detail + 解读 + 附件均到位
 
 ## 修订历史

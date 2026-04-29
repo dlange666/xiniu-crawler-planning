@@ -7,12 +7,16 @@ from pathlib import Path
 
 from infra.storage.sqlite_store import SqliteMetadataStore
 from scripts.run_codegen_for_adapter import (
+    adapter_artifact,
+    adapter_test_artifact,
     apply_db_task_to_args,
     claim_codegen_task,
     mark_codegen_task_finished,
     normalize_task_json,
     record_wrapper_eval,
+    seed_artifact,
     slug,
+    source_dir,
     write_task_skeleton,
 )
 
@@ -59,6 +63,21 @@ def test_slug_uses_source_name_not_generic_channel_prefix() -> None:
     assert slug("m.miit.gov.cn") == "miit"
     assert slug("search.sh.gov.cn") == "sh_search"
     assert slug("sousuo.www.gov.cn") == "gov_search"
+
+
+def test_codegen_artifact_paths_use_source_directory(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="wap.miit.gov.cn", business_context="gov_policy")
+
+    assert source_dir(tmp_path, args) == tmp_path / "domains/gov_policy/miit"
+    assert adapter_artifact(tmp_path, args) == (
+        tmp_path / "domains/gov_policy/miit/miit_adapter.py"
+    )
+    assert seed_artifact(tmp_path, args) == (
+        tmp_path / "domains/gov_policy/miit/miit_seed.yaml"
+    )
+    assert adapter_test_artifact(tmp_path, args) == (
+        tmp_path / "tests/gov_policy/test_miit_adapter.py"
+    )
 
 
 def test_claim_codegen_task_claims_next_scheduled_by_priority(tmp_path: Path) -> None:

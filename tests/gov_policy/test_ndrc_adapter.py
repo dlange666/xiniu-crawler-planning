@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from domains.gov_policy.adapters import ndrc
+from domains.gov_policy.ndrc import ndrc_adapter as ndrc
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-GOLDEN_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/golden/ndrc"
+NDRC_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/ndrc"
 
 
 def test_adapter_meta_complete() -> None:
@@ -30,7 +30,8 @@ def test_resolve_via_registry() -> None:
     adapter_registry.reset()
     adapter_registry.discover()
     entry = adapter_registry.get("gov_policy", "www.ndrc.gov.cn")
-    assert entry.module is ndrc
+    assert entry.module_path == "domains.gov_policy.ndrc.ndrc_adapter"
+    assert entry.module.ADAPTER_META["host"] == "www.ndrc.gov.cn"
     assert "www.ndrc.gov.cn" in {e.host for e in adapter_registry.list_all()}
 
 
@@ -43,7 +44,7 @@ def test_build_list_url_page0() -> None:
 
 
 def test_parse_list_extracts_detail_links() -> None:
-    sample = GOLDEN_DIR / "list_page.html"
+    sample = NDRC_DIR / "ndrc_golden_list_page.html"
     if not sample.exists():
         pytest.skip(f"no golden list snapshot at {sample}")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -57,7 +58,7 @@ def test_parse_list_extracts_detail_links() -> None:
 
 def test_parse_list_emits_pagination() -> None:
     """新功能：parse_list 通过 createPageHTML 发现翻页 URL。"""
-    sample = GOLDEN_DIR / "list_page.html"
+    sample = NDRC_DIR / "ndrc_golden_list_page.html"
     if not sample.exists():
         pytest.skip("no golden list snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -71,7 +72,7 @@ def test_parse_list_emits_pagination() -> None:
 
 
 def test_parse_detail_extracts_title_and_body() -> None:
-    sample = GOLDEN_DIR / "detail_sample.html"
+    sample = NDRC_DIR / "ndrc_golden_detail_sample.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")

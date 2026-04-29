@@ -2,7 +2,7 @@
 """CLI 入口：从 seed YAML 起跑一个采集 task。
 
 用法：
-    uv run scripts/run_crawl_task.py domains/gov_policy/seeds/ndrc.yaml
+    uv run scripts/run_crawl_task.py domains/gov_policy/ndrc/ndrc_seed.yaml
 
 环境变量：
     STORAGE_PROFILE=dev (默认)

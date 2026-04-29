@@ -1,6 +1,6 @@
 # Infra 抓取策略
 
-> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
 
 > 适用：`infra/http/`、`infra/robots/`、`infra/frontier/` 三模块共同遵守的
 > 策略契约。所有业务域（`gov_policy/`、未来的 `exchange_policy/` 等）都不
@@ -193,7 +193,7 @@ emergency_window_sec        = 600
 
 | 渠道 | 允许的修改 |
 |---|---|
-| `domains/<context>/seeds/<host>.yaml` | `politeness_rps`（向下）、`max_pages_per_run`、`run_frequency` |
+| `domains/<context>/<source>/<source>_seed.yaml` | `politeness_rps`（向下）、`max_pages_per_run`、`run_frequency` |
 | `domains/<context>/harness_rules.py::compliance_blocklist` | 追加禁词（不可删） |
 | `docs/prod-spec/<context>.md` §"反爬执行" | 业务域命中反爬后业务侧的处理（如发停机邮件、关业务订阅等） |
 
@@ -229,5 +229,6 @@ emergency_window_sec        = 600
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 3 | 2026-04-29 | 业务域 seed 覆盖渠道同步 source 聚合目录命名：`domains/<context>/<source>/<source>_seed.yaml` | `codegen-output-contract.md` rev 9 |
 | rev 2 | 2026-04-28 | 新增 §2.3 限流分级启动（warm-up）：4 级阶梯（10%/30%/60%/100%）+ 升降级触发条件 + 默认参数；§8 默认值表追加 ramp-up 相关；为 `codegen-auto-merge.md` canary 提供基础 | — |
 | rev 1 | 2026-04-28 | 初稿 | — |

@@ -27,7 +27,9 @@ def reset() -> None:
 
 
 def discover(*, domains_root: Path | None = None) -> int:
-    """扫描 domains/*/adapters/*.py，凡含 ADAPTER_META 的模块自动登记。
+    """扫描 domains/*/<source>/*_adapter.py，凡含 ADAPTER_META 的模块自动登记。
+
+    兼容旧路径 domains/*/adapters/*.py，迁移完成后可删除兼容扫描。
 
     幂等：重复调用不会重注册（按 module_path 去重），但会刷新 _DISCOVERED 标记。
     返回新增条目数。
@@ -43,13 +45,7 @@ def discover(*, domains_root: Path | None = None) -> int:
     for ctx_dir in sorted(root.iterdir()):
         if not ctx_dir.is_dir() or ctx_dir.name.startswith("_"):
             continue
-        adapters_dir = ctx_dir / "adapters"
-        if not adapters_dir.is_dir():
-            continue
-        for py_file in sorted(adapters_dir.glob("*.py")):
-            if py_file.stem.startswith("_"):
-                continue
-            module_path = f"domains.{ctx_dir.name}.adapters.{py_file.stem}"
+        for _py_file, module_path in _iter_adapter_modules(ctx_dir):
             module = import_module(module_path)
             if not hasattr(module, "ADAPTER_META"):
                 continue
@@ -68,6 +64,34 @@ def discover(*, domains_root: Path | None = None) -> int:
         ", ".join(f"{ctx}/{host}" for (ctx, host) in sorted(_REGISTRY.keys())),
     )
     return added
+
+
+def _iter_adapter_modules(ctx_dir: Path) -> list[tuple[Path, str]]:
+    """Return adapter files in canonical source layout, plus legacy adapters."""
+    modules: list[tuple[Path, str]] = []
+    for source_dir in sorted(ctx_dir.iterdir()):
+        if (
+            not source_dir.is_dir()
+            or source_dir.name.startswith("_")
+            or source_dir.name in {"adapters", "golden", "seeds", "__pycache__"}
+        ):
+            continue
+        adapter_file = source_dir / f"{source_dir.name}_adapter.py"
+        if adapter_file.is_file():
+            modules.append(
+                (
+                    adapter_file,
+                    f"domains.{ctx_dir.name}.{source_dir.name}.{source_dir.name}_adapter",
+                )
+            )
+
+    adapters_dir = ctx_dir / "adapters"
+    if adapters_dir.is_dir():
+        for py_file in sorted(adapters_dir.glob("*.py")):
+            if py_file.stem.startswith("_"):
+                continue
+            modules.append((py_file, f"domains.{ctx_dir.name}.adapters.{py_file.stem}"))
+    return modules
 
 
 def _register(entry: AdapterEntry) -> None:
@@ -91,7 +115,7 @@ def get(business_context: str, host: str) -> AdapterEntry:
     entry = _REGISTRY.get(key)
     if entry is None:
         candidates = sorted(
-            f"{ctx}/{h}" for (ctx, h) in _REGISTRY.keys()
+            f"{ctx}/{h}" for (ctx, h) in _REGISTRY
             if ctx == business_context
         )
         hint = (

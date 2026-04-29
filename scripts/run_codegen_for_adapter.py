@@ -138,6 +138,25 @@ def sh_ok(
     return sh(cmd, cwd=cwd, check=False, env=env) == 0
 
 
+def source_dir(worktree: Path, args: argparse.Namespace) -> Path:
+    return worktree / "domains" / args.business_context / slug(args.host)
+
+
+def adapter_artifact(worktree: Path, args: argparse.Namespace) -> Path:
+    host_slug = slug(args.host)
+    return source_dir(worktree, args) / f"{host_slug}_adapter.py"
+
+
+def seed_artifact(worktree: Path, args: argparse.Namespace) -> Path:
+    host_slug = slug(args.host)
+    return source_dir(worktree, args) / f"{host_slug}_seed.yaml"
+
+
+def adapter_test_artifact(worktree: Path, args: argparse.Namespace) -> Path:
+    host_slug = slug(args.host)
+    return worktree / "tests" / args.business_context / f"test_{host_slug}_adapter.py"
+
+
 def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
     """生成本次的 .codegen-prompt.md，pipeline 之外的目标特化部分。"""
     host_slug = slug(args.host)
@@ -180,11 +199,12 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
            字段值，不要输出 markdown fence、注释、尾逗号或任何 JSON 外文本；
            每次编辑后必须执行 `uv run python -m json.tool <task-json>`。
         3. 实现：
-           - `domains/{args.business_context}/adapters/{host_slug}.py`
-           - `domains/{args.business_context}/seeds/{host_slug}.yaml`
+           - `domains/{args.business_context}/{host_slug}/{host_slug}_adapter.py`
+           - `domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml`
              （**必须**含 `scope_mode: {args.scope_mode}`）
-           - `domains/{args.business_context}/golden/{host_slug}/...`
-           - `tests/{args.business_context}/test_adapter_{host_slug}.py`
+           - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.html`
+           - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.golden.json`
+           - `tests/{args.business_context}/test_{host_slug}_adapter.py`
         4. 跑 pipeline §4.5 的验收门，**包括 live smoke + audit 脚本**
         5. 写 eval：`docs/eval-test/codegen-{host_slug}-{today:%Y%m%d}.md`，判定来自 audit 退出码
         6. eval 最后一节写 PR handoff 与 notify-message 草稿
@@ -570,11 +590,9 @@ def codegen_task_json_valid(worktree: Path, args: argparse.Namespace) -> bool:
 
 
 def golden_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
-    golden_dir = (
-        worktree / "domains" / args.business_context / "golden" / slug(args.host)
-    )
-    html_count = len(list(golden_dir.glob("*.html")))
-    json_count = len(list(golden_dir.glob("*.golden.json")))
+    artifacts_dir = source_dir(worktree, args)
+    html_count = len(list(artifacts_dir.glob("*.html")))
+    json_count = len(list(artifacts_dir.glob("*.golden.json")))
     if html_count < 5 or json_count < 5:
         print(
             "[gate] golden artifacts insufficient: "
@@ -627,8 +645,10 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
     res["pytest_all"] = sh_ok(
         ["uv", "run", "pytest", "tests/", "-q"], cwd=worktree, env=gate_env)
     res["pytest_new"] = sh_ok(
-        ["uv", "run", "pytest",
-         f"tests/{args.business_context}/test_adapter_{slug(args.host)}.py", "-v"],
+        [
+            "uv", "run", "pytest",
+            str(adapter_test_artifact(worktree, args).relative_to(worktree)), "-v",
+        ],
         cwd=worktree, env=gate_env)
     res["registry"] = sh_ok(
         ["uv", "run", "python", "-c",
@@ -646,7 +666,7 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
         stale.unlink()
     smoke_cmd = [
         "uv", "run", "python", "scripts/run_crawl_task.py",
-        f"domains/{args.business_context}/seeds/{slug(args.host)}.yaml",
+        str(seed_artifact(worktree, args).relative_to(worktree)),
         "--max-pages", "30", "--max-depth", "1",
         "--scope-mode", args.scope_mode,
         "--business-context", args.business_context,

@@ -56,23 +56,23 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 | Plan | `docs/exec-plan/active/plan-YYYYMMDD-codegen-<host>.md` |
 | Task | `docs/task/active/task-codegen-<host>-YYYY-MM-DD.json` |
 | Eval | `docs/eval-test/codegen-<host>-YYYYMMDD.md` |
-| Adapter | `domains/<business_context>/adapters/<host_slug>.py` |
-| Seed | `domains/<business_context>/seeds/<host_slug>.yaml` |
-| Golden HTML | `domains/<business_context>/golden/<host_slug>/*.html` |
-| Golden JSON | `domains/<business_context>/golden/<host_slug>/*.golden.json` |
-| Tests | `tests/<business_context>/test_adapter_<host_slug>.py` |
+| Adapter | `domains/<business_context>/<host_slug>/<host_slug>_adapter.py` |
+| Seed | `domains/<business_context>/<host_slug>/<host_slug>_seed.yaml` |
+| Golden HTML | `domains/<business_context>/<host_slug>/<host_slug>_golden_*.html` |
+| Golden JSON | `domains/<business_context>/<host_slug>/<host_slug>_golden_*.golden.json` |
+| Tests | `tests/<business_context>/test_<host_slug>_adapter.py` |
 
 如确需触达其它路径，必须在 eval §5 写明原因并停下等待人审，不得自行扩大范围。
 
 `host_slug` 必须承载源站主体职责，不得使用 `www`、`wap`、`m`、`mobile`
-等通用渠道前缀作为 adapter 名。示例：`www.most.gov.cn -> most`、
+等通用渠道前缀作为目录或文件名。示例：`www.most.gov.cn -> most`、
 `wap.miit.gov.cn -> miit`、`search.sh.gov.cn -> sh_search`。
 
 ## 3. Adapter 契约
 
 完整规则见 `docs/prod-spec/codegen-output-contract.md`。最小要求：
 
-- 参考 `domains/gov_policy/adapters/ndrc.py` 的结构。
+- 参考 `domains/gov_policy/ndrc/ndrc_adapter.py` 的结构。
 - `ADAPTER_META` 必须通过 `infra/adapter_registry/meta.py` 校验。
 - `render_mode` 默认写 `direct`；发现 JS shell / 无限滚动 / challenge 时停下写 red，不升级到 headless。
 - 必备 hook：
@@ -153,12 +153,12 @@ uv run python -m json.tool docs/task/active/task-codegen-<host>-YYYY-MM-DD.json
 ```bash
 uv run pytest tests/ -q
 
-uv run pytest tests/<business_context>/test_adapter_<host_slug>.py -v
+uv run pytest tests/<business_context>/test_<host_slug>_adapter.py -v
 
 uv run python -c "from infra import adapter_registry; adapter_registry.discover(); print(adapter_registry.get('<business_context>', '<host>'))"
 
 uv run python scripts/run_crawl_task.py \
-  domains/<business_context>/seeds/<host_slug>.yaml \
+  domains/<business_context>/<host_slug>/<host_slug>_seed.yaml \
   --max-pages 30 --max-depth 1 --scope-mode <scope_mode> --task-id <smoke_task_id>
 
 uv run python scripts/audit_crawl_quality.py \

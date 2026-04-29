@@ -1,5 +1,5 @@
 # 政策图谱 · 产品规格
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：active
 
 
 > 本文件是爬虫仓库视角的**业务规格**。完整产品策划请见
@@ -129,10 +129,8 @@
 | `model` | `domains/gov_policy/model/` | 领域实体：`UrlRecord`、`FetchRecord`、`PolicyParsed`、`PolicyDocJSON`、`Attachment`、`SourceMetadata` |
 | `crawl` | `domains/gov_policy/crawl/` | 通用采集编排：seed 加载、调用 `infra/frontier` 派发、调用 `infra/http` 抓取 |
 | `render` | `domains/gov_policy/render/` | headless 渲染编排（M5 启用，MVP 占位） |
-| `parse` | `domains/gov_policy/parse/` | 通用解析流程：调度对应 `adapters/<host>` 的 hook |
-| `adapters` | `domains/gov_policy/adapters/<host>.py` | 站点适配器（每 host 一文件）：URL 模式、DOM 选择器、解析 hook。MVP 手写，M3.5 起由 codegen 产出 |
-| `golden` | `domains/gov_policy/golden/<host>/` | 黄金用例：固定快照 + 期望 JSON，供 harness 跑单元校验 |
-| `seeds` | `domains/gov_policy/seeds/<host>.yaml` | 数据源入口 URL、抓取频率、礼貌性参数 |
+| `parse` | `domains/gov_policy/parse/` | 通用解析流程：调度对应 source 目录内 `<source>_adapter.py` 的 hook |
+| `source directories` | `domains/gov_policy/<source>/` | 单个源站的聚合目录：`<source>_adapter.py`、`<source>_seed.yaml`、`<source>_golden_*`。`<source>` 使用 canonical host slug，例如 `ndrc` / `miit` |
 | `dedup` | `domains/gov_policy/dedup/` | 联合键 `(policy_title_norm, pub_code, content_sha256)` 严格去重 + simhash 信号 |
 | `extract` | `domains/gov_policy/extract/{prompts,schemas}/` | 36 字段 prompt + JSON schema |
 | `sink` | `domains/gov_policy/sink/` | 通过 `infra/storage` 写元数据 + 原始档 |
@@ -141,9 +139,9 @@
 子模块依赖方向：
 
 ```
-crawl    → infra/{frontier,http,robots,storage} · model · adapters · sink
-parse    → adapters · model · dedup · sink
-adapters → model（纯函数 hook，不持有 infra）
+crawl    → infra/{frontier,http,robots,storage} · model · source directories · sink
+parse    → source directories · model · dedup · sink
+source adapter → model（纯函数 hook，不持有 infra）
 dedup    → model
 extract  → infra/ai · model · sink
 sink     → infra/storage · model
@@ -161,4 +159,5 @@ sink     → infra/storage · model
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 2 | 2026-04-29 | 将 `adapters/`、`seeds/`、`golden/` 横向分散目录调整为 `domains/gov_policy/<source>/` 源聚合目录；同源 adapter、seed、golden 均使用 `<source>_*` 前缀命名 | `codegen-output-contract.md` rev 9 |
 | rev 1 | 2026-04-28 | 初稿 | — |

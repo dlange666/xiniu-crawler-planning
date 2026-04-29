@@ -35,7 +35,7 @@ class AdapterEntry:
     detail_url_pattern: re.Pattern[str]
     last_verified_at: date
     module: ModuleType
-    module_path: str         # "domains.gov_policy.adapters.ndrc"，排错用
+    module_path: str         # "domains.gov_policy.ndrc.ndrc_adapter"，排错用
     supported_modes: tuple[str, ...] = ("full",)
     # 渲染策略：direct=httpx 直连（默认）；headless=Playwright（暂未实现）
     # 触发 headless 的条件见 architecture.md §5 "抓取层级顺序"
@@ -51,7 +51,7 @@ def build_entry(
     """读取 module.ADAPTER_META，校验并构建 AdapterEntry。
 
     business_context 优先用 META 显式声明的 owner_context；
-    否则回退到从模块路径推断（domains.<ctx>.adapters.<host>）。
+    否则回退到从模块路径推断（domains.<ctx>.<source>.<source>_adapter）。
     """
     meta: dict[str, Any] | None = getattr(module, "ADAPTER_META", None)
     if not isinstance(meta, dict):
