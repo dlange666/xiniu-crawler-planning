@@ -18,8 +18,8 @@ from .registry import (
     discover,
     get,
     list_all,
-    resolve_by_url,
     reset,
+    resolve_by_url,
 )
 
 __all__ = [

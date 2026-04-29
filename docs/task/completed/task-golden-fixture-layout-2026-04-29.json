@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "迁移 source golden fixture 到 tests/domains 镜像目录，并提取 adapter contract golden 校验逻辑。",
+  "pr_name": "golden-fixture-layout",
+  "branch": "agent/cleanup-20260429-golden-fixture-layout",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-1101",
+      "title": "[tests/codegen] golden fixture 目录收口与契约复用",
+      "status": "completed",
+      "plan_id": "plan-20260429-golden-fixture-layout",
+      "spec_ref": "codegen-output-contract.md §2-§5；domain-gov-policy.md §8；codegen-auto-merge.md §3",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T23:40:00+08:00",
+      "notes": "golden 已迁移到 tests/domains/<context>/<source>/fixtures/，adapter tests 已镜像到 tests/domains/gov_policy/<source>/test_adapter.py；codegen wrapper 与 pytest 复用 infra.adapter_contract.golden，并新增全 source fixture contract 回归；eval 证据 green。"
+    }
+  ]
+}

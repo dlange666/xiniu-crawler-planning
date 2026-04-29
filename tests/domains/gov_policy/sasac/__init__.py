@@ -1,0 +1,1 @@
+"""SASAC adapter test package."""

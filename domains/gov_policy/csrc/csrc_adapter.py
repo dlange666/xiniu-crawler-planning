@@ -140,18 +140,23 @@ def _extract_meta_tags(soup: BeautifulSoup) -> dict[str, str]:
     for meta_tag in soup.find_all("meta"):
         name = meta_tag.get("name") or meta_tag.get("property")
         content = meta_tag.get("content")
-        if name and content:
-            if name in ("ArticleTitle", "PubDate", "ContentSource", "Keywords", "Description"):
-                if name == "ArticleTitle":
-                    meta["标题"] = content
-                elif name == "PubDate":
-                    meta["发布日期"] = content
-                elif name == "ContentSource":
-                    meta["发布机构"] = content
-                elif name == "Keywords":
-                    meta["关键词"] = content
-                elif name == "Description":
-                    meta["摘要"] = content
+        if name and content and name in (
+            "ArticleTitle",
+            "PubDate",
+            "ContentSource",
+            "Keywords",
+            "Description",
+        ):
+            if name == "ArticleTitle":
+                meta["标题"] = content
+            elif name == "PubDate":
+                meta["发布日期"] = content
+            elif name == "ContentSource":
+                meta["发布机构"] = content
+            elif name == "Keywords":
+                meta["关键词"] = content
+            elif name == "Description":
+                meta["摘要"] = content
     return meta
 
 

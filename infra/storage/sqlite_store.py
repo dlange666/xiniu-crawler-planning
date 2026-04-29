@@ -294,7 +294,8 @@ class SqliteMetadataStore:
                             status_code: int | None, content_type: str | None,
                             bytes_received: int | None, latency_ms: int | None,
                             etag: str | None, last_modified: str | None,
-                            error_kind: str | None, error_detail: str | None) -> int:
+                            error_kind: str | None, error_detail: str | None,
+                            rendered: bool = False) -> int:
         """attempt 自动递增 = max(已有) + 1。
 
         重启续抓时同 (task_id, url_fp) 的下一次 attempt 会取 N+1，避免 UNIQUE 冲突。
@@ -308,11 +309,11 @@ class SqliteMetadataStore:
             next_attempt = (row[0] if row else 0) + 1
             self._conn.execute(
                 """INSERT INTO fetch_record
-                (task_id, url_fp, attempt, status_code, content_type, bytes_received,
+                (task_id, url_fp, attempt, status_code, rendered, content_type, bytes_received,
                  latency_ms, etag, last_modified, error_kind, error_detail)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (task_id, url_fp, next_attempt, status_code, content_type, bytes_received,
-                 latency_ms, etag, last_modified, error_kind, error_detail),
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (task_id, url_fp, next_attempt, status_code, int(rendered), content_type,
+                 bytes_received, latency_ms, etag, last_modified, error_kind, error_detail),
             )
         return next_attempt
 

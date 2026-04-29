@@ -12,7 +12,7 @@ from domains.gov_policy.csrc.csrc_adapter import (
 )
 from infra.crawl.types import SeedSpec
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+GOLDEN_DIR = Path(__file__).parent / "fixtures"
 
 
 def test_adapter_meta():
@@ -24,9 +24,8 @@ def test_adapter_meta():
 
 def test_parse_list():
     """测试 parse_list 提取详情链接。"""
-    html_path = PROJECT_ROOT / "domains" / "gov_policy" / "csrc" / "csrc_golden_list_1.html"
-    with open(html_path) as f:
-        html = f.read()
+    html_path = GOLDEN_DIR / "csrc_golden_list_1.html"
+    html = html_path.read_text(encoding="utf-8", errors="replace")
 
     url = "http://www.csrc.gov.cn/csrc/c106256/fg.shtml"
     result = parse_list(html, url)
@@ -42,9 +41,8 @@ def test_parse_list():
 
 def test_parse_detail():
     """测试 parse_detail 提取标题、正文、metadata。"""
-    html_path = PROJECT_ROOT / "domains" / "gov_policy" / "csrc" / "csrc_golden_detail_1.html"
-    with open(html_path) as f:
-        html = f.read()
+    html_path = GOLDEN_DIR / "csrc_golden_detail_1.html"
+    html = html_path.read_text(encoding="utf-8", errors="replace")
 
     url = "http://www.csrc.gov.cn/csrc/c106256/c3217074/content.shtml"
     result = parse_detail(html, url)

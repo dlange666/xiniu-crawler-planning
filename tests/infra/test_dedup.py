@@ -1,4 +1,4 @@
-"""infra/crawl/dedup 严格去重测试（迁自 tests/gov_policy/test_dedup.py）。"""
+"""infra/crawl/dedup 严格去重测试。"""
 
 from __future__ import annotations
 

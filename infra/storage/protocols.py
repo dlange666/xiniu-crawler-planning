@@ -46,7 +46,8 @@ class MetadataStore(Protocol):
                             status_code: int | None, content_type: str | None,
                             bytes_received: int | None, latency_ms: int | None,
                             etag: str | None, last_modified: str | None,
-                            error_kind: str | None, error_detail: str | None) -> int:
+                            error_kind: str | None, error_detail: str | None,
+                            rendered: bool = False) -> int:
         """写入一条 fetch_record；attempt 由实现自动递增（max(已有)+1）。
 
         重启续抓时不会因 UNIQUE(task_id, url_fp, attempt) 冲突而崩溃。

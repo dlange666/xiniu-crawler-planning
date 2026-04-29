@@ -1,0 +1,1 @@
+"""CSRC adapter test package."""

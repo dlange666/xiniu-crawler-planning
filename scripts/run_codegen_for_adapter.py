@@ -43,6 +43,7 @@ from typing import Any, NamedTuple
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
+from infra.adapter_contract import golden_fixture_dir, validate_golden_artifacts  # noqa: E402
 from infra.storage.sqlite_store import SqliteMetadataStore  # noqa: E402
 
 PIPELINE = REPO / "docs/codegen-pipeline.md"
@@ -189,9 +190,13 @@ def seed_artifact(worktree: Path, args: argparse.Namespace) -> Path:
     return source_dir(worktree, args) / f"{host_slug}_seed.yaml"
 
 
+def fixture_dir(worktree: Path, args: argparse.Namespace) -> Path:
+    return golden_fixture_dir(worktree, args.business_context, slug(args.host))
+
+
 def adapter_test_artifact(worktree: Path, args: argparse.Namespace) -> Path:
     host_slug = slug(args.host)
-    return worktree / "tests" / args.business_context / f"test_{host_slug}_adapter.py"
+    return worktree / "tests" / "domains" / args.business_context / host_slug / "test_adapter.py"
 
 
 def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
@@ -239,9 +244,11 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
            - `domains/{args.business_context}/{host_slug}/{host_slug}_adapter.py`
            - `domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml`
              （**必须**含 `scope_mode: {args.scope_mode}`）
-           - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.html`
-           - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.golden.json`
-           - `tests/{args.business_context}/test_{host_slug}_adapter.py`
+           - `tests/domains/{args.business_context}/{host_slug}/fixtures/`
+             下的 `{host_slug}_golden_*.html`
+           - `tests/domains/{args.business_context}/{host_slug}/fixtures/`
+             下的 `{host_slug}_golden_*.golden.json`
+           - `tests/domains/{args.business_context}/{host_slug}/test_adapter.py`
         4. 跑 pipeline §5 的验收门，**包括 live smoke + audit 脚本**
         5. 写 eval：`docs/eval-test/codegen-{host_slug}-{today:%Y%m%d}.md`，判定来自 audit 退出码
         6. eval 最后一节写 PR handoff 与 notify-message 草稿
@@ -251,7 +258,7 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
         你不能在完成代码后直接结束。每次实现或修复后，必须按顺序执行：
 
         ```bash
-        uv run pytest tests/{args.business_context}/test_{host_slug}_adapter.py -q
+        uv run pytest tests/domains/{args.business_context}/{host_slug}/test_adapter.py -q
         uv run pytest tests/ -q
         uv run python -c "from infra import adapter_registry; adapter_registry.discover(); \
 print(adapter_registry.get('{args.business_context}', '{args.host}'))"
@@ -336,7 +343,7 @@ domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
           不改 infra），并用 golden/test 覆盖；eval 记录 helper 未覆盖、fallback
           规则，以及是否建议另开 infra 任务提升。**本 codegen 任务禁止修改
           `infra/`；infra 能力由单独 infra 任务补。**
-        - 若存在分页信号，`tests/{args.business_context}/test_{host_slug}_adapter.py`
+        - 若存在分页信号，`tests/domains/{args.business_context}/{host_slug}/test_adapter.py`
           必须断言 `parse_list(...).next_pages` 至少包含 1 个预期分页 URL；golden
           JSON 也要记录对应 `next_pages`
         - 详情 URL 模式：从列表 HTML 里抽 5+ 链接，归纳 detail_url_pattern 正则
@@ -745,82 +752,12 @@ def codegen_task_json_valid(worktree: Path, args: argparse.Namespace) -> bool:
 
 
 def golden_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
-    artifacts_dir = source_dir(worktree, args)
+    artifacts_dir = fixture_dir(worktree, args)
     ok, message = validate_golden_artifacts(artifacts_dir, slug(args.host))
     if not ok:
         print(f"[gate] golden artifacts invalid: {message}")
         return False
     return True
-
-
-def _json_contains_key(value: Any, key: str) -> bool:
-    if isinstance(value, dict):
-        return key in value or any(_json_contains_key(v, key) for v in value.values())
-    if isinstance(value, list):
-        return any(_json_contains_key(v, key) for v in value)
-    return False
-
-
-def _json_has_nonempty_next_pages(value: Any) -> bool:
-    if isinstance(value, dict):
-        next_pages = value.get("next_pages")
-        if isinstance(next_pages, list) and len(next_pages) > 0:
-            return True
-        return any(_json_has_nonempty_next_pages(v) for v in value.values())
-    if isinstance(value, list):
-        return any(_json_has_nonempty_next_pages(v) for v in value)
-    return False
-
-
-def validate_golden_artifacts(artifacts_dir: Path, host_slug: str) -> tuple[bool, str]:
-    """Validate coverage-oriented golden files instead of plain file counts."""
-    html_files = sorted(artifacts_dir.glob(f"{host_slug}_golden_*.html"))
-    json_files = sorted(artifacts_dir.glob(f"{host_slug}_golden_*.golden.json"))
-    html_by_stem = {p.with_suffix("").name: p for p in html_files}
-    json_by_stem = {p.name.removesuffix(".golden.json"): p for p in json_files}
-    paired_stems = sorted(set(html_by_stem) & set(json_by_stem))
-    missing_json = sorted(set(html_by_stem) - set(json_by_stem))
-    missing_html = sorted(set(json_by_stem) - set(html_by_stem))
-    if missing_json:
-        return False, f"missing paired golden JSON for: {', '.join(missing_json[:5])}"
-    if missing_html:
-        return False, f"missing paired golden HTML for: {', '.join(missing_html[:5])}"
-
-    list_pairs = 0
-    detail_pairs = 0
-    pagination_pairs = 0
-    pagination_signal = False
-    invalid_json: list[str] = []
-    for stem in paired_stems:
-        json_path = json_by_stem[stem]
-        try:
-            payload = json.loads(json_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            invalid_json.append(f"{json_path.name}: {exc.msg}")
-            continue
-        if "_golden_list_" in stem or stem.endswith("_golden_list"):
-            list_pairs += 1
-        if "_golden_detail_" in stem or stem.endswith("_golden_detail"):
-            detail_pairs += 1
-        if re.search(r"_golden_list_(?:[2-9]|\d{2,})$", stem) or "pagination" in stem:
-            pagination_pairs += 1
-        if _json_contains_key(payload, "parse_list") and _json_has_nonempty_next_pages(payload):
-            pagination_signal = True
-
-    if invalid_json:
-        return False, "; ".join(invalid_json[:3])
-    if len(paired_stems) < 4:
-        return False, f"paired golden count={len(paired_stems)}, required>=4"
-    if list_pairs < 1:
-        return False, "required >=1 paired list golden"
-    if detail_pairs < 3:
-        return False, f"paired detail golden count={detail_pairs}, required>=3"
-    if pagination_signal and pagination_pairs < 1:
-        return False, "pagination signal found, required >=1 paired pagination/list_2 golden"
-    return True, (
-        f"paired={len(paired_stems)}, list={list_pairs}, detail={detail_pairs}, "
-        f"pagination={pagination_pairs}"
-    )
 
 
 def invoke_opencode(
@@ -937,7 +874,7 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> G
         print(f"[gate] task JSON invalid: {task_result.error}")
     details["task_json"] = "ok" if task_result.ok else (task_result.error or "invalid")
     golden_ok, golden_detail = validate_golden_artifacts(
-        source_dir(worktree, args), slug(args.host)
+        fixture_dir(worktree, args), slug(args.host)
     )
     res["golden"] = golden_ok
     if not golden_ok:
@@ -1163,6 +1100,7 @@ def codegen_commit_paths(
             task_artifact_path(worktree, args),
             eval_path,
             source_dir(worktree, args),
+            fixture_dir(worktree, args),
             adapter_test_artifact(worktree, args),
         ]
     else:

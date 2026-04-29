@@ -22,6 +22,8 @@ from urllib.parse import urlparse
 
 from infra.frontier import Frontier, FrontierItem
 from infra.http import HostTokenBucket, HttpClient, HttpResponse
+from infra.render import RenderConfig, RendererPool, RenderRequest, decide_render
+from infra.render.types import RenderResult
 from infra.robots import RobotsChecker
 from infra.storage import get_blob_store, get_metadata_store
 
@@ -74,6 +76,13 @@ def _blob_key(task_id: int, url_hash: str, ts: datetime | None = None,
     )
 
 
+def _adapter_render_mode(adapter) -> str:
+    meta = getattr(adapter, "ADAPTER_META", {})
+    if isinstance(meta, dict):
+        return str(meta.get("render_mode", "direct"))
+    return "direct"
+
+
 # ─── URL 类型标记（在 frontier item 的 discovery_source 中编码）────────────
 DISCOVERY_LIST_PAGE = "list_page"            # depth=0：seed 列表页（首页或翻页）
 DISCOVERY_DETAIL = "list_to_detail"          # depth=1：列表页 → 详情链接
@@ -106,6 +115,7 @@ class CrawlEngine:
         task: TaskSpec,
         seed: SeedSpec,
         adapter_resolver: AdapterResolver | None = None,
+        renderer: RendererPool | None = None,
         run_id: str | None = None,
     ) -> None:
         self.task = task
@@ -115,21 +125,13 @@ class CrawlEngine:
             from infra import adapter_registry
             if not adapter_registry.list_all():
                 adapter_registry.discover()
-            entry = adapter_registry.get(task.business_context, seed.host)
-            if entry.render_mode != "direct":
-                msg = (
-                    f"adapter {entry.module_path} declares "
-                    f"render_mode={entry.render_mode!r}; only 'direct' is "
-                    "implemented (headless renderer not built yet, see "
-                    "architecture.md §5)"
-                )
-                raise NotImplementedError(msg)
             self.adapter_resolver = (
                 lambda host: adapter_registry.get(task.business_context, host).module
             )
         else:
             self.adapter_resolver = adapter_resolver
         self.run_id = run_id or datetime.now(UTC).strftime("run-%Y%m%dT%H%M%SZ")
+        self.renderer = renderer
 
         # token bucket
         bucket = HostTokenBucket(default_rps=1.0, default_burst=2)
@@ -250,15 +252,34 @@ class CrawlEngine:
             return
 
         try:
-            list_result = adapter.parse_list(
-                resp.body.decode("utf-8", errors="replace"),
-                resp.final_url,
-            )
+            html = resp.body.decode("utf-8", errors="replace")
+            html, final_url, rendered, render_error = self._maybe_render_html(
+                adapter, item, html, resp, parse_failed=False)
+            if render_error:
+                raise RuntimeError(render_error)
+            list_result = adapter.parse_list(html, final_url)
         except Exception as e:  # noqa: BLE001
-            report.errors += 1
-            report.failures.append(f"parse_list failed {item.url}: {e}")
-            self._mark_failed(item)
-            return
+            html = resp.body.decode("utf-8", errors="replace")
+            html, final_url, rendered, render_error = self._maybe_render_html(
+                adapter, item, html, resp, parse_failed=True)
+            if render_error:
+                report.errors += 1
+                report.failures.append(f"parse_list failed {item.url}: {e}; {render_error}")
+                self._mark_failed(item)
+                return
+            if not rendered:
+                report.errors += 1
+                report.failures.append(f"parse_list failed {item.url}: {e}")
+                self._mark_failed(item)
+                return
+            try:
+                list_result = adapter.parse_list(html, final_url)
+            except Exception as retry_error:  # noqa: BLE001
+                report.errors += 1
+                report.failures.append(
+                    f"parse_list failed after render {item.url}: {retry_error}")
+                self._mark_failed(item)
+                return
 
         # 翻页（仍是 depth=0）
         if self.task.scope_follow_pagination:
@@ -308,22 +329,42 @@ class CrawlEngine:
             return
 
         try:
-            detail = adapter.parse_detail(
-                resp.body.decode("utf-8", errors="replace"),
-                resp.final_url,
-            )
+            html = resp.body.decode("utf-8", errors="replace")
+            html, final_url, rendered, render_error = self._maybe_render_html(
+                adapter, item, html, resp, parse_failed=False)
+            if render_error:
+                raise RuntimeError(render_error)
+            detail = adapter.parse_detail(html, final_url)
         except Exception as e:  # noqa: BLE001
-            report.errors += 1
-            report.failures.append(f"parse_detail failed {item.url}: {e}")
-            self._mark_failed(item)
-            return
+            html = resp.body.decode("utf-8", errors="replace")
+            html, final_url, rendered, render_error = self._maybe_render_html(
+                adapter, item, html, resp, parse_failed=True)
+            if render_error:
+                report.errors += 1
+                report.failures.append(f"parse_detail failed {item.url}: {e}; {render_error}")
+                self._mark_failed(item)
+                return
+            if not rendered:
+                report.errors += 1
+                report.failures.append(f"parse_detail failed {item.url}: {e}")
+                self._mark_failed(item)
+                return
+            try:
+                detail = adapter.parse_detail(html, final_url)
+            except Exception as retry_error:  # noqa: BLE001
+                report.errors += 1
+                report.failures.append(
+                    f"parse_detail failed after render {item.url}: {retry_error}")
+                self._mark_failed(item)
+                return
 
         url_hash = hashlib.sha256(item.url.encode("utf-8")).hexdigest()
         body_sha = _content_sha256(detail.body_text)
 
         key = _blob_key(self.task.task_id, url_hash[:16])
+        raw_body = html.encode("utf-8") if rendered else resp.body
         blob_uri = self.blobs.put(
-            key, resp.body,
+            key, raw_body,
             content_type=resp.headers.get("content-type"),
         )
 
@@ -340,11 +381,12 @@ class CrawlEngine:
             "raw_links_count": len(detail.raw_links),
             "interpret_links_count": len(detail.interpret_links),
             "discovery_source": item.discovery_source,
+            "rendered": rendered,
         }
         inserted = self.metadata.insert_crawl_raw(
             task_id=self.task.task_id,
             business_context=self.task.business_context,
-            host=item.host, url=item.url, canonical_url=resp.final_url,
+            host=item.host, url=item.url, canonical_url=final_url,
             url_hash=url_hash, content_sha256=body_sha,
             raw_blob_uri=blob_uri,
             data_json=json.dumps(data_payload, ensure_ascii=False),
@@ -420,6 +462,66 @@ class CrawlEngine:
             last_modified=resp.headers.get("last-modified"),
             error_kind=resp.error_kind, error_detail=resp.error_detail,
         )
+
+    def _record_render_fetch(self, item: FrontierItem, result: RenderResult) -> None:
+        self.metadata.insert_fetch_record(
+            task_id=self.task.task_id, url_fp=item.url_fp,
+            status_code=result.status_code or None,
+            content_type=result.content_type,
+            bytes_received=result.bytes_received,
+            latency_ms=result.elapsed_ms,
+            etag=None,
+            last_modified=None,
+            error_kind=result.error_kind,
+            error_detail=result.error_detail,
+            rendered=True,
+        )
+
+    def _maybe_render_html(
+        self,
+        adapter,
+        item: FrontierItem,
+        html: str,
+        resp: HttpResponse,
+        *,
+        parse_failed: bool,
+    ) -> tuple[str, str, bool, str | None]:
+        render_mode = _adapter_render_mode(adapter)
+        should_render = getattr(adapter, "should_render", None)
+        config = self.renderer.config if self.renderer is not None else RenderConfig.from_env()
+        decision = decide_render(
+            html=html,
+            url=resp.final_url,
+            render_mode=render_mode,
+            config=config,
+            should_render=should_render if callable(should_render) else None,
+            parse_failed=parse_failed,
+            robots_allowed=True,
+            anti_bot_signal=resp.anti_bot_signal,
+        )
+        if not decision.render_required:
+            return html, resp.final_url, False, None
+        if not decision.allowed:
+            return html, resp.final_url, False, (
+                f"render blocked [{decision.reason}]"
+            )
+        if self.renderer is None:
+            return html, resp.final_url, False, "render blocked [renderer_missing]"
+
+        result = self.renderer.render(RenderRequest(
+            url=resp.final_url,
+            host=item.host,
+            html=html,
+            reason=decision.reason,
+            timeout_ms=config.page_timeout_ms,
+            max_bytes=config.max_bytes,
+        ))
+        self._record_render_fetch(item, result)
+        if result.error_kind:
+            return html, resp.final_url, False, (
+                f"render failed [{result.error_kind}] {result.error_detail or ''}".strip()
+            )
+        return result.html, result.final_url, True, None
 
     def _mark_done(self, item: FrontierItem) -> None:
         self.metadata.mark_url_record_state(
