@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "落地 crawl_task_generation 表（spec §4.1.2），把 codegen 过程状态从 execution 表分离；WebUI 同时显示 adapter_ready / generation_status / execution_status 三层。",
+  "pr_name": "task-generation",
+  "branch": "agent/infra-20260429-task-generation-v2",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-1101",
+      "title": "[infra/storage] 建 crawl_task_generation 表",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-task-generation-table",
+      "spec_ref": "data-model.md §4.1.2",
+      "dependency": [],
+      "assignee": "infra",
+      "last_updated": "2026-04-29T00:00:00+08:00",
+      "notes": "按 spec DDL 建表；新 task 创建时插 pending；老 task INSERT OR IGNORE backfill。"
+    },
+    {
+      "id": "T-20260429-1102",
+      "title": "[infra/codegen] wrapper 写 generation 生命周期",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-task-generation-table",
+      "spec_ref": "codegen-output-contract.md §3.1",
+      "dependency": ["T-20260429-1101"],
+      "assignee": "infra",
+      "last_updated": "2026-04-29T00:00:00+08:00",
+      "notes": "claim → claimed；invoke_opencode 前 → drafting；gates 完成 → merged/failed。"
+    },
+    {
+      "id": "T-20260429-1103",
+      "title": "[webui] /api/tasks 暴露 generation_status + adapter_ready",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-task-generation-table",
+      "spec_ref": "data-model.md §4.1.2",
+      "dependency": ["T-20260429-1101"],
+      "assignee": "webui",
+      "last_updated": "2026-04-29T00:00:00+08:00",
+      "notes": "store join generation 表；adapter_ready 来自 registry。"
+    },
+    {
+      "id": "T-20260429-1104",
+      "title": "[webui/frontend] 列表显示 Adapter / Codegen / Status / 操作",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-task-generation-table",
+      "spec_ref": "—",
+      "dependency": ["T-20260429-1103"],
+      "assignee": "webui",
+      "last_updated": "2026-04-29T00:00:00+08:00",
+      "notes": "ProTable 加列；汇总条显示 已开发/总数；详情按钮。"
+    },
+    {
+      "id": "T-20260429-1105",
+      "title": "[docs] 同步 spec 实施状态",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-task-generation-table",
+      "spec_ref": "data-model.md §4.1.2 / codegen-output-contract.md changelog",
+      "dependency": ["T-20260429-1101", "T-20260429-1102", "T-20260429-1103"],
+      "assignee": "docs",
+      "last_updated": "2026-04-29T00:00:00+08:00",
+      "notes": "data-model §4.1.2 标注实施；contract 加 rev 16 changelog 条目。"
+    }
+  ]
+}

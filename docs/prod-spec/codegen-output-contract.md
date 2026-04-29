@@ -1,6 +1,6 @@
 # Codegen 输出契约 · 适配器结构 / Sink Schema / Harness 门槛 / Prompt 框架
 
-> **版本**：rev 15 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 16 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：M3.5 codegen-bootstrap 实施（关联 plan-20260428-codegen-bootstrap）
 
 > 本 spec 规定 codegen 平台（OpenCode CLI 等编码 agent）产出的适配器代码
@@ -253,6 +253,7 @@ agent 收口前必须自检：
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 16 | 2026-04-29 | 落地 `crawl_task_generation` 表（spec data-model §4.1.2）：wrapper 在 claim 时写 `claimed`、调 opencode 前写 `drafting`、gates 完成写 `merged`/`failed`；codegen 过程状态从 `crawl_task_execution` 中分离，避免"开发完成"和"爬取完成"语义混淆。WebUI `/api/tasks` 暴露 `adapter_ready`（来自 `adapter_registry`）和 `generation_status`，列表三层并列展示 | `infra/storage/sqlite_store.py`、`infra/codegen/task_db.py`、`webui/`、`data-model.md` §4.1.2 |
 | rev 15 | 2026-04-29 | 把单文件 wrapper `scripts/run_codegen_for_adapter.py` 拆到 `infra/codegen/`（shell/paths/worktree/task_db/task_json/golden/prompt/opencode/gates/eval_writer/publish），入口改为 `scripts/run_codegen.py`；pipeline §1 澄清"agent 不修改 `infra/`"指 capability 模块，不含 `infra/codegen/` wrapper 自身 | `infra/codegen/`、`scripts/run_codegen.py`、`docs/codegen-pipeline.md` §1 |
 | rev 14 | 2026-04-29 | 强化 codegen 失败闭环与质量门：wrapper red 自动回灌失败证据最多 3 轮；golden 从数量门槛改为覆盖型配对门槛；新增 SourceMetadata、正文脚本污染、业务 scope/detail_url_pattern、audit sample 自检要求 | `docs/codegen-pipeline.md`、`scripts/run_codegen_for_adapter.py`、`scripts/audit_crawl_quality.py` |
 | rev 13 | 2026-04-29 | 明确 codegen agent 在 infra helper 不覆盖但静态信号明确时，必须在 domain adapter 内实现有界 fallback，且禁止在 codegen 任务中修改 infra；同时将常见 `createPageHTML(container_id,total,cur,prefix,suffix,rows)` 变体提升到 infra pagination helper | `docs/codegen-pipeline.md`、`scripts/run_codegen_for_adapter.py`、`infra-crawl-engine.md` rev 4 |

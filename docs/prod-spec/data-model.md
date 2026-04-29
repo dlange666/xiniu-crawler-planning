@@ -127,6 +127,11 @@ CREATE TABLE crawl_task (
 
 #### 4.1.2 `crawl_task_generation` —— Codegen 过程状态
 
+> **实施状态**：SQLite 版本已落地（`infra/storage/sqlite_store.py`，2026-04-29）。
+> wrapper 在 claim 时写 `claimed`，调用 opencode 前写 `drafting`，gates 完成后
+> 写 `merged`/`failed`。`tier` / `pr_url` / `sandbox_run_id` 字段已建表但暂不写入，
+> 留待 M4 auto-merge-policy 落地。
+
 ```sql
 CREATE TABLE crawl_task_generation (
     task_id          BIGINT UNSIGNED PRIMARY KEY,

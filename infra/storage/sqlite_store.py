@@ -99,6 +99,35 @@ CREATE INDEX IF NOT EXISTS idx_crawl_task_execution_status_next
 CREATE INDEX IF NOT EXISTS idx_crawl_task_execution_adapter
     ON crawl_task_execution(adapter_host);
 
+CREATE TABLE IF NOT EXISTS crawl_task_generation (
+    task_id          INTEGER PRIMARY KEY,
+    status           TEXT NOT NULL DEFAULT 'pending'
+                     CHECK(status IN (
+                         'pending','claimed','drafting',
+                         'sandbox_test','pr_open','merged','failed'
+                     )),
+    tier             TEXT,
+    branch           TEXT,
+    worktree_path    TEXT,
+    pr_url           TEXT,
+    sandbox_run_id   TEXT,
+    backend          TEXT,
+    backend_version  TEXT,
+    attempts         INTEGER NOT NULL DEFAULT 0,
+    last_error       TEXT,
+    last_eval_path   TEXT,
+    worker_id        TEXT,
+    claim_at         TEXT,
+    heartbeat_at     TEXT,
+    started_at       TEXT,
+    finished_at      TEXT,
+    FOREIGN KEY (task_id) REFERENCES crawl_task(task_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_generation_status_claim
+    ON crawl_task_generation(status, claim_at);
+CREATE INDEX IF NOT EXISTS idx_crawl_task_generation_stale_heartbeat
+    ON crawl_task_generation(status, heartbeat_at);
+
 CREATE TABLE IF NOT EXISTS url_record (
     task_id              INTEGER NOT NULL,
     url_fp               TEXT NOT NULL,
@@ -220,6 +249,11 @@ class SqliteMetadataStore:
                     "last_eval_path": "TEXT",
                     "needs_manual_review": "INTEGER NOT NULL DEFAULT 0",
                 },
+            )
+            # 老 task 没有 generation 行，补一条 pending；spec §4.1.2 要求 1:1。
+            self._conn.execute(
+                """INSERT OR IGNORE INTO crawl_task_generation (task_id, status)
+                   SELECT task_id, 'pending' FROM crawl_task"""
             )
 
     def _ensure_columns(self, table: str, columns: dict[str, str]) -> None:

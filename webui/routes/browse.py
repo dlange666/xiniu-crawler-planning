@@ -15,7 +15,7 @@ VIEWER = Depends(require_role("viewer"))
 @router.get("/browse")
 def browse_home(request: Request, user: User = VIEWER):
     _ = user
-    tasks = request.app.state.task_store.list_tasks(limit=1)
+    tasks = request.app.state.task_store.list_tasks(limit=1)["items"]
     if not tasks:
         return RedirectResponse("/tasks", status_code=303)
     return RedirectResponse(f"/tasks/{tasks[0]['task_id']}/items", status_code=303)

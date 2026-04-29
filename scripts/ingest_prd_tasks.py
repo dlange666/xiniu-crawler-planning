@@ -178,6 +178,11 @@ def ingest_candidates(
                     VALUES (?, 'scheduled', ?)""",
                     (task_id, candidate.host),
                 )
+                conn.execute(
+                    """INSERT OR IGNORE INTO crawl_task_generation (task_id, status)
+                    VALUES (?, 'pending')""",
+                    (task_id,),
+                )
                 inserted += 1
     finally:
         conn.close()

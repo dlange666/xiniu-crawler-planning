@@ -64,6 +64,11 @@ class TaskStore:
                     VALUES (?, 'scheduled', ?)""",
                     (task_id, host),
                 )
+                conn.execute(
+                    """INSERT OR IGNORE INTO crawl_task_generation (task_id, status)
+                    VALUES (?, 'pending')""",
+                    (task_id,),
+                )
             return task_id
         finally:
             conn.close()
@@ -73,9 +78,20 @@ class TaskStore:
         *,
         status: str | None = None,
         business_context: str | None = None,
+        generation_status: str | None = None,
+        ready_hosts: set[tuple[str, str]] | None = None,
+        adapter_filter: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
+        """返回 {"items": [...], "total": N}。
+
+        adapter_filter:
+          - None / "all"：不过滤
+          - "ready"：只返回 (business_context, host) 在 ready_hosts 中的
+          - "pending"：只返回不在 ready_hosts 中的
+        ready_hosts 由调用方从 adapter_registry 派生传入；store 不直接依赖 registry。
+        """
         where = []
         params: list[Any] = []
         if status:
@@ -84,39 +100,64 @@ class TaskStore:
         if business_context:
             where.append("t.business_context = ?")
             params.append(business_context)
+        if generation_status:
+            where.append("COALESCE(g.status, 'pending') = ?")
+            params.append(generation_status)
+
+        if adapter_filter in {"ready", "pending"} and ready_hosts is not None:
+            if not ready_hosts:
+                if adapter_filter == "ready":
+                    where.append("0 = 1")
+            else:
+                placeholders = ", ".join(["(?, ?)"] * len(ready_hosts))
+                op = "IN" if adapter_filter == "ready" else "NOT IN"
+                where.append(f"(t.business_context, t.host) {op} ({placeholders})")
+                for ctx, host in ready_hosts:
+                    params.extend([ctx, host])
+
         where_sql = "WHERE " + " AND ".join(where) if where else ""
-        params.extend([limit, offset])
+
+        select_sql = f"""SELECT
+                t.task_id, t.business_context, t.site_url, t.host, t.data_kind,
+                t.crawl_mode, t.scope_mode, t.max_pages_per_run,
+                t.politeness_rps, t.created_by, t.created_at,
+                COALESCE(e.status, 'scheduled') AS status,
+                COALESCE(g.status, 'pending') AS generation_status,
+                COALESCE(raw.raw_count, 0) AS raw_count,
+                COALESCE(urls.url_count, 0) AS url_count,
+                COALESCE(fetches.fetch_count, 0) AS fetch_count
+            FROM crawl_task t
+            LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
+            LEFT JOIN crawl_task_generation g ON g.task_id = t.task_id
+            LEFT JOIN (
+                SELECT task_id, COUNT(*) AS raw_count
+                FROM crawl_raw GROUP BY task_id
+            ) raw ON raw.task_id = t.task_id
+            LEFT JOIN (
+                SELECT task_id, COUNT(*) AS url_count
+                FROM url_record GROUP BY task_id
+            ) urls ON urls.task_id = t.task_id
+            LEFT JOIN (
+                SELECT task_id, COUNT(*) AS fetch_count
+                FROM fetch_record GROUP BY task_id
+            ) fetches ON fetches.task_id = t.task_id
+            {where_sql}
+            ORDER BY t.created_at DESC, t.task_id DESC
+            LIMIT ? OFFSET ?"""
+
+        count_sql = f"""SELECT COUNT(*)
+            FROM crawl_task t
+            LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
+            LEFT JOIN crawl_task_generation g ON g.task_id = t.task_id
+            {where_sql}"""
+
         conn = self._connect()
         try:
+            total = int(conn.execute(count_sql, tuple(params)).fetchone()[0])
             rows = conn.execute(
-                f"""SELECT
-                    t.task_id, t.business_context, t.site_url, t.host, t.data_kind,
-                    t.crawl_mode, t.scope_mode, t.max_pages_per_run,
-                    t.politeness_rps, t.created_by, t.created_at,
-                    COALESCE(e.status, 'scheduled') AS status,
-                    COALESCE(raw.raw_count, 0) AS raw_count,
-                    COALESCE(urls.url_count, 0) AS url_count,
-                    COALESCE(fetches.fetch_count, 0) AS fetch_count
-                FROM crawl_task t
-                LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
-                LEFT JOIN (
-                    SELECT task_id, COUNT(*) AS raw_count
-                    FROM crawl_raw GROUP BY task_id
-                ) raw ON raw.task_id = t.task_id
-                LEFT JOIN (
-                    SELECT task_id, COUNT(*) AS url_count
-                    FROM url_record GROUP BY task_id
-                ) urls ON urls.task_id = t.task_id
-                LEFT JOIN (
-                    SELECT task_id, COUNT(*) AS fetch_count
-                    FROM fetch_record GROUP BY task_id
-                ) fetches ON fetches.task_id = t.task_id
-                {where_sql}
-                ORDER BY t.created_at DESC, t.task_id DESC
-                LIMIT ? OFFSET ?""",
-                tuple(params),
+                select_sql, (*params, limit, offset),
             ).fetchall()
-            return [_row_dict(r) for r in rows]
+            return {"items": [_row_dict(r) for r in rows], "total": total}
         finally:
             conn.close()
 
@@ -133,6 +174,17 @@ class TaskStore:
                 (task_id,),
             ).fetchone()
             return _row_dict(row) if row else None
+        finally:
+            conn.close()
+
+    def get_generation_status(self, task_id: int) -> str:
+        conn = self._connect()
+        try:
+            row = conn.execute(
+                "SELECT status FROM crawl_task_generation WHERE task_id=?",
+                (task_id,),
+            ).fetchone()
+            return row[0] if row else "pending"
         finally:
             conn.close()
 

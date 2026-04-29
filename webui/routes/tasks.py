@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from infra import adapter_registry
 from webui.auth.backend import User
 from webui.auth.deps import require_role
 
@@ -15,7 +16,7 @@ OPERATOR = Depends(require_role("operator"))
 
 @router.get("/tasks", response_class=HTMLResponse)
 def task_list(request: Request, user: User = VIEWER):
-    tasks = request.app.state.task_store.list_tasks()
+    tasks = request.app.state.task_store.list_tasks()["items"]
     return request.app.state.templates.TemplateResponse(
         request, "tasks/list.html", {"user": user, "tasks": tasks}
     )
@@ -101,12 +102,47 @@ def api_tasks(
     request: Request,
     status: str | None = None,
     business_context: str | None = None,
+    generation_status: str | None = None,
+    adapter: str | None = None,
+    page: int = 1,
+    page_size: int = 20,
     user: User = VIEWER,
 ):
-    items = request.app.state.task_store.list_tasks(
-        status=status, business_context=business_context
+    """服务端分页 + 三层状态筛选。
+
+    - status: crawl_task_execution.status（爬取/调度状态）
+    - generation_status: crawl_task_generation.status（codegen 过程）
+    - adapter: all / ready / pending（基于 adapter_registry 的 host 集合）
+    - business_context: 业务域过滤
+    - page / page_size: 服务端分页，size 上限 100
+    """
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+
+    adapter_registry.discover()
+    known_hosts = {(e.business_context, e.host) for e in adapter_registry.list_all()}
+
+    result = request.app.state.task_store.list_tasks(
+        status=status,
+        business_context=business_context,
+        generation_status=generation_status,
+        ready_hosts=known_hosts,
+        adapter_filter=adapter,
+        limit=page_size,
+        offset=(page - 1) * page_size,
     )
-    return {"items": items, "user": {"email": user.email, "role": user.role}}
+    items = result["items"]
+    for item in items:
+        item["adapter_ready"] = (
+            (item.get("business_context"), item.get("host")) in known_hosts
+        )
+    return {
+        "items": items,
+        "total": result["total"],
+        "page": page,
+        "page_size": page_size,
+        "user": {"email": user.email, "role": user.role},
+    }
 
 
 @router.get("/api/tasks/{task_id}")
@@ -119,6 +155,12 @@ def api_task_detail(
     task = request.app.state.task_store.get_task(task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="task not found")
+
+    adapter_registry.discover()
+    known_hosts = {(e.business_context, e.host) for e in adapter_registry.list_all()}
+    task["adapter_ready"] = (task.get("business_context"), task.get("host")) in known_hosts
+    task["generation_status"] = request.app.state.task_store.get_generation_status(task_id)
+
     return {
         "task": task,
         "progress": request.app.state.task_store.progress(task_id),
