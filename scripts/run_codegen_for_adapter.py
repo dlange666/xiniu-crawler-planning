@@ -209,6 +209,52 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
         5. 写 eval：`docs/eval-test/codegen-{host_slug}-{today:%Y%m%d}.md`，判定来自 audit 退出码
         6. eval 最后一节写 PR handoff 与 notify-message 草稿
 
+        ## 强制收口协议
+
+        你不能在完成代码后直接结束。每次实现或修复后，必须按顺序执行：
+
+        ```bash
+        uv run pytest tests/{args.business_context}/test_{host_slug}_adapter.py -q
+        uv run pytest tests/ -q
+        uv run python -c "from infra import adapter_registry; adapter_registry.discover(); \
+print(adapter_registry.get('{args.business_context}', '{args.host}'))"
+        uv run python -m json.tool docs/task/active/task-codegen-{host_slug}-{today}.json
+        test "$(find domains/{args.business_context}/{host_slug} \
+-maxdepth 1 -name '*.html' | wc -l)" -ge 5
+        test "$(find domains/{args.business_context}/{host_slug} \
+-maxdepth 1 -name '*.golden.json' | wc -l)" -ge 5
+        rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm
+        uv run python scripts/run_crawl_task.py \
+domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
+--max-pages 30 --max-depth 1 --scope-mode {args.scope_mode} \
+--business-context {args.business_context} --task-id {args.smoke_task_id}
+        uv run python scripts/audit_crawl_quality.py \
+--task-id {args.smoke_task_id} --db runtime/db/dev.db \
+--thresholds title_rate=0.95,body_100_rate=0.95,metadata_rate=0.30
+        ```
+
+        最终判定只能来自上述 gates：
+
+        - 全部 PASS：eval 写 `green`，task 状态写 `verifying`（PR 创建前不要写 `completed`）
+        - 任一 FAIL：eval 写 `red` 或 `partial`，task 状态写 `failed`
+
+        禁止只凭单测 / registry 通过写 green；禁止在 live smoke / audit 未跑时写 green。
+        禁止把旧 `runtime/db/dev.db` checkpoint 造成的 0 records 当作源站失败。
+        禁止把可通过静态 JSON / CDN / API / feed / SSR 采集的 JS shell 直接写成
+        `render_required`。
+
+        ## red 前必须排查
+
+        如果 live smoke 或 audit 失败，不能立即结束。必须先做并在 eval 记录：
+
+        1. 删除 `runtime/db/dev.db*` 后重跑 live smoke
+        2. 单独 curl seed URL，确认 HTTP 状态、content-type 和响应体
+        3. 单独调用 `parse_list(seed_response, seed_url)`，确认 `detail_links > 0`
+        4. 单独 curl 一个 detail URL，确认 `parse_detail` 抽出 title / body / metadata
+        5. parser 单独可用但 runner 无数据时，检查 seed URL、scope、robots、
+           runtime checkpoint、`ADAPTER_META.list_url_pattern`
+        6. 只有这些检查完成后，才允许写 red
+
         ## 你需要自己探的事
 
         - 翻页：实际 fetch 一次列表页，看是否有 `index_N.htm` / `?page=N`

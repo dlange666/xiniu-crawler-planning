@@ -39,10 +39,13 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不在 adapter 内发 HTTP 请求，不写 sleep / 限流 / retry；这些由 `infra/` 处理。
 - 站点探查必须通过 `scripts/probe_source.py`，artifact 只能写在 repo 内
   `runtime/probe/<host_slug>/`；不得把样本写到 `/tmp` 后再读取。
+- 所有写入必须落在当前 worktree 内，且只能写 §2 允许范围；禁止使用
+  `/tmp/*`、父目录、其它 worktree 或任何绝对路径作为产物目标。
 - 不 import 其它业务域；不修改已有 adapter。
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
 - 如果任一 gate 或 audit 失败，eval 必须是 `red` 或 `partial`，禁止自判 green。
+- 禁止在未跑 live smoke + audit 时写 green；禁止只凭单测或 registry 通过写 green。
 - Task 文件必须是标准 JSON：禁止 markdown fence、注释、尾逗号、JSON 外解释文本；
   每次编辑后必须执行 `uv run python -m json.tool <task-json>`。
 - wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
@@ -76,7 +79,9 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 
 - 参考 `domains/gov_policy/ndrc/ndrc_adapter.py` 的结构。
 - `ADAPTER_META` 必须通过 `infra/adapter_registry/meta.py` 校验。
-- `render_mode` 默认写 `direct`；发现 JS shell / 无限滚动 / challenge 时停下写 red，不升级到 headless。
+- `render_mode` 默认写 `direct`。发现 JS shell / Angular / Vue / React 时，不得直接写
+  `render_required`；必须先查静态 JS、CDN JSON、XHR/fetch/API、feed/sitemap、
+  SSR 入口。只有公开 direct 采集路径全部不可用时，才允许 red 为 `render_required`。
 - 探查必须使用 `scripts/probe_source.py --mode auto` 的 verdict。发现稳定、
   robots 允许、可回放的公开 JSON/API artifact 时，采集优先级为：
   `json_api -> static_html/SSR -> headless_required`；未发现 API 时才用
@@ -169,8 +174,8 @@ uv run python scripts/probe_source.py \
 
 ### 4.5 gates
 
-按顺序执行。前一项失败时可以停下写 eval；wrapper 可能为诊断继续跑其它 gate，
-但最终任一 FAIL 都不能 green。
+按顺序执行。实现或修复完成后必须完整执行本节，不能在代码写完后直接结束。
+wrapper 也会重复执行这些确定性 gates；最终任一 FAIL 都不能 green。
 
 ```bash
 uv run pytest tests/ -q
@@ -179,14 +184,36 @@ uv run pytest tests/<business_context>/test_<host_slug>_adapter.py -v
 
 uv run python -c "from infra import adapter_registry; adapter_registry.discover(); print(adapter_registry.get('<business_context>', '<host>'))"
 
+uv run python -m json.tool docs/task/active/task-codegen-<host_slug>-YYYY-MM-DD.json
+
+test "$(find domains/<business_context>/<host_slug> -maxdepth 1 -name '*.html' | wc -l)" -ge 5
+test "$(find domains/<business_context>/<host_slug> -maxdepth 1 -name '*.golden.json' | wc -l)" -ge 5
+
+rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm
+
 uv run python scripts/run_crawl_task.py \
   domains/<business_context>/<host_slug>/<host_slug>_seed.yaml \
   --max-pages 30 --max-depth 1 --scope-mode <scope_mode> --task-id <smoke_task_id>
 
 uv run python scripts/audit_crawl_quality.py \
   --task-id <smoke_task_id> \
+  --db runtime/db/dev.db \
   --thresholds title_rate=0.95,body_100_rate=0.95,metadata_rate=0.30
 ```
+
+### 4.5.1 red 前排查
+
+如果 live smoke 或 audit 失败，不能立即收口 red。必须先完成并在 eval 中记录：
+
+1. 删除 `runtime/db/dev.db*` 后重跑 live smoke，排除旧 checkpoint / 续抓状态污染。
+2. 单独 `curl` seed URL，记录 HTTP 状态、content-type、响应体是否含目标列表数据。
+3. 单独调用 `parse_list(seed_response, seed_url)`，确认 `detail_links` 数量；若为 0，
+   回到 JS/CDN/API/feed/SSR 探查，不得直接写 `render_required`。
+4. 单独 `curl` 一个详情 URL，并调用 `parse_detail`，确认 title、body、metadata 命中。
+5. parser 单独可用但 runner 无数据时，优先检查 seed URL、scope、robots、runtime DB
+   checkpoint 和 `ADAPTER_META.list_url_pattern`，不得先归咎于源站或 infra。
+6. 只有上述检查完成且仍无法满足 gates，才允许 red；red 必须写明失败 gate、
+   `last_error_kind`、复现命令和下一轮最小动作。
 
 green 条件：
 

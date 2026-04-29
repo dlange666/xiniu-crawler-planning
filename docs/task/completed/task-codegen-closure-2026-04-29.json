@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "强化 codegen agent 收口协议：完整 gates、smoke DB 清理、red 前 seed/parser/scope/checkpoint 排查。",
+  "pr_name": "codegen-closure",
+  "branch": "agent/infra-20260429-codegen-closure",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-901",
+      "title": "[infra/codegen] 强化 agent 收口与 red 前排查协议",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-closure",
+      "spec_ref": "codegen-output-contract.md rev 12；docs/codegen-pipeline.md §4.5",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T16:35:00+08:00",
+      "notes": "pipeline 与 per-task prompt 已强制完整 gates、清理 smoke DB、red 前排查；验证见 docs/eval-test/codegen-closure-20260429.md。"
+    }
+  ]
+}
