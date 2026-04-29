@@ -1,6 +1,7 @@
 # Plan: codegen-sasac
 
-> **版本**：rev 1 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 1 · **最近修订**：2026-04-29 · **状态**：completed
+> **关联 PR**：https://github.com/dlange666/xiniu-crawler-planning/pull/20
 
 ## 关联 spec
 

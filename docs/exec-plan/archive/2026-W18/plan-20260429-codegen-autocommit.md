@@ -4,8 +4,9 @@
 
 - **Plan ID**：`plan-20260429-codegen-autocommit`
 - **关联规格**：`docs/prod-spec/codegen-output-contract.md`
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner / Generator / Evaluator`
+- **关联 PR**：https://github.com/dlange666/xiniu-crawler-planning/pull/22
 
 ## 2. 目标
 

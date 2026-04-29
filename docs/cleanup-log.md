@@ -5,6 +5,7 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-30 | 已合并分支 / worktree / 完成态 plan & task 归档 | 删除 2 个 ahead=0 的 worktree（`xiniu-crawler-codegen-most` / `xiniu-crawler-webui-list-polish`）；删除 4 条已合并本地分支（`agent/cleanup-20260429-golden-fixture-layout` / `agent/feature-20260428-codegen-most` / `agent/feature-20260429-webui-list-polish` / `agent/infra-20260429-codegen-modules`）；`git fetch --prune` 收回 2 个 stale 远端引用（render-codegen-platform / docs-intro-sync）。归档 8 组完成态 plan + task：codegen-most / codegen-task-runner / prd-task-ingest（plan 已 completed）+ codegen-csrc / codegen-sasac / codegen-autocommit / codegen-fallback-prompt / codegen-feedback（plan 状态从 active → completed，补 PR 链接），plan 移至 `docs/exec-plan/archive/2026-W18/`，task 移至 `docs/task/completed/` | Cleaner |
 | 2026-04-29 | 过期 codegen worktree 与断链目录 | 删除 11 个已合并或无唯一提交的注册 worktree，并清理对应本地分支；删除 3 个断链的旧 codegen 目录（`xiniu-crawler-codegen-most` / `xiniu-crawler-codegen-miit` / `xiniu-crawler-codegen-mof`，约 193 MB）。保留 open PR #15 的 `xiniu-crawler-codegen-nfra-t7`、任务入库 worktree `xiniu-crawler-prd-task-ingest`、用户主工作区 `xiniu-crawler-planning`，以及非 git 运行时目录 `xiniu-crawler` | Cleaner |
 | 2026-04-28 | 删 exec-plan/completed/ legacy 空目录 | 该目录是从 investment-analyzer 模板继承下来的兼容层，新 plan 走 archive/YYYY-Www/。删除目录；index.md 同步去掉相关说明 | Cleaner |
 | 2026-04-28 | 删除冗余 docs/index.md | 内容已被 AGENTS.md Repository Map / Doc Naming Conventions + 根 README.md "Start Here" 覆盖；docs 根目录不需要二级索引。子目录 index.md 保留 | Cleaner |

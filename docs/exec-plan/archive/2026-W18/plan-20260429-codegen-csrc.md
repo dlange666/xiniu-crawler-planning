@@ -2,7 +2,8 @@
 
 > **关联 spec**: `docs/prod-spec/codegen-output-contract.md`
 > **创建日期**: 2026-04-29
-> **状态**: active
+> **状态**: completed
+> **关联 PR**: https://github.com/dlange666/xiniu-crawler-planning/pull/18
 
 ## 目标
 
