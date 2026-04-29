@@ -81,6 +81,18 @@ def test_metadata_init_schema_migrates_existing_execution_table(tmp_path: Path) 
     store.close()
 
 
+def test_crawl_task_default_politeness_rps_is_one(tmp_metadata: SqliteMetadataStore) -> None:
+    tmp_metadata.execute(
+        """INSERT INTO crawl_task
+        (business_context, site_url, host)
+        VALUES ('gov_policy', 'https://example.gov.cn/', 'example.gov.cn')"""
+    )
+
+    row = tmp_metadata.fetch_one("SELECT politeness_rps FROM crawl_task")
+
+    assert row == (1.0,)
+
+
 def test_url_record_upsert_and_idempotent(tmp_metadata: SqliteMetadataStore) -> None:
     tmp_metadata.upsert_url_record(
         task_id=1, url_fp="abc123", url="https://x.com/a",

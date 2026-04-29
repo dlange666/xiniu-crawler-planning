@@ -39,7 +39,7 @@ def create_task_from_form(
     scope_mode: str = Form("same_origin"),
     scope_url_pattern: str = Form(""),
     max_pages_per_run: str = Form(""),
-    politeness_rps: str = Form("0.5"),
+    politeness_rps: str = Form("1.0"),
     purpose: str = Form(""),
     responsible_party: str = Form(""),
 ):

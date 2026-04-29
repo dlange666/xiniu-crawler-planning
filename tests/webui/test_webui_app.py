@@ -222,7 +222,7 @@ def test_create_task_writes_created_by_and_webui_audit(tmp_path: Path) -> None:
             "data_kind": "policy",
             "crawl_mode": "full",
             "scope_mode": "same_origin",
-            "politeness_rps": "0.5",
+            "politeness_rps": "1.0",
         },
         follow_redirects=False,
     )

@@ -13,6 +13,20 @@ def _mock_transport(handler):
     return httpx.MockTransport(handler)
 
 
+def test_token_bucket_default_rps_is_one() -> None:
+    bucket = HostTokenBucket()
+
+    assert bucket.default_rps == 1.0
+
+
+def test_token_bucket_caps_host_rps_to_default() -> None:
+    bucket = HostTokenBucket(default_rps=1.0, default_burst=1)
+
+    bucket.configure("host1", rps=2.0, burst=1)
+
+    assert bucket._buckets["host1"].rps == 1.0
+
+
 def test_token_bucket_basic_ratelimits() -> None:
     bucket = HostTokenBucket(default_rps=2.0, default_burst=1)
     start = time.monotonic()

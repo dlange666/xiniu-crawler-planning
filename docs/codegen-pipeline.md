@@ -150,7 +150,7 @@ uv run python scripts/probe_source.py \
   static HTML / SSR / headless；仍不得在 hook 内联网。
 - 若 verdict 为 `static_html`，使用 direct HTML / SSR 输出实现 adapter。
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
-- `politeness_rps` 不得高于默认 0.5。
+- `politeness_rps` 不得高于默认 1.0；无明确站点限制时使用 1.0。
 - golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
 - 测试至少覆盖 registry 校验、`parse_list` 发现详情、`parse_detail` 抽标题/正文/metadata。
 
