@@ -37,6 +37,8 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不绕过验证码、登录认证、付费墙、technical challenge、robots 明示拒绝。
 - 不使用 `captcha_solver`、`stealth`、`undetected_chromedriver`、`selenium-stealth`、`playwright-stealth` 等绕过保护工具。
 - 不在 adapter 内发 HTTP 请求，不写 sleep / 限流 / retry；这些由 `infra/` 处理。
+- 站点探查必须通过 `scripts/probe_source.py`，artifact 只能写在 repo 内
+  `runtime/probe/<host_slug>/`；不得把样本写到 `/tmp` 后再读取。
 - 不 import 其它业务域；不修改已有 adapter。
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
@@ -66,6 +68,10 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 参考 `domains/gov_policy/adapters/ndrc.py` 的结构。
 - `ADAPTER_META` 必须通过 `infra/adapter_registry/meta.py` 校验。
 - `render_mode` 默认写 `direct`；发现 JS shell / 无限滚动 / challenge 时停下写 red，不升级到 headless。
+- 探查必须使用 `scripts/probe_source.py --mode auto` 的 verdict。发现稳定、
+  robots 允许、可回放的公开 JSON/API artifact 时，采集优先级为：
+  `json_api -> static_html/SSR -> headless_required`；未发现 API 时才用
+  direct HTML，`headless_required` 只写 red 等待 render-pool。
 - 必备 hook：
 
 ```python
@@ -124,6 +130,22 @@ git status --short --branch
 
 写 adapter / seed / golden / test：
 
+- 先执行：
+
+```bash
+uv run python scripts/probe_source.py \
+  --url <entry_url> \
+  --host <host> \
+  --mode auto \
+  --out runtime/probe/<host_slug>/
+```
+
+- 必须读取 `runtime/probe/<host_slug>/probe-result.json`。
+- 若 verdict 为 `robots_disallow` / `blocked` / `fetch_failed`，停下写 red eval。
+- 若 verdict 为 `headless_required`，停下写 red eval，说明后续需要 render-pool。
+- 若 verdict 为 `json_api`，优先基于 JSON artifact 设计列表解析；该优先级高于
+  static HTML / SSR / headless；仍不得在 hook 内联网。
+- 若 verdict 为 `static_html`，使用 direct HTML / SSR 输出实现 adapter。
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
 - `politeness_rps` 不得高于默认 0.5。
 - golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
