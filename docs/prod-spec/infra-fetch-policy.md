@@ -1,6 +1,6 @@
 # Infra 抓取策略
 
-> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 4 · **最近修订**：2026-04-29 · **状态**：active
 
 > 适用：`infra/http/`、`infra/robots/`、`infra/frontier/` 三模块共同遵守的
 > 策略契约。所有业务域（`gov_policy/`、未来的 `exchange_policy/` 等）都不
@@ -20,7 +20,7 @@
 
 | 层级 | 单位 | 由谁控制 | 默认值 | 业务域可覆盖 |
 |---|---|---|---|---|
-| host 礼貌性 | RPS / burst | host token bucket | `default_rps_per_host = 0.5`、`burst = 2` | 仅可降低（向下） |
+| host 礼貌性 | RPS / burst | host token bucket | `default_rps_per_host = 1.0`、`burst = 2` | 仅可降低（向下） |
 | domain 配额 | 总抓取数 | task 创建时设定 | 由 task `max_pages_per_run` 决定 | task 级 |
 | 任务预算 | 时间窗、URL 总数 | Frontier | 见 task spec | task 级 |
 
@@ -168,7 +168,7 @@ delay = min(cap, base * 2^attempt) + jitter
 ## 8. 默认值汇总
 
 ```
-default_rps_per_host        = 0.5
+default_rps_per_host        = 1.0
 burst                       = 2
 ramp_up_enabled_default     = true
 ramp_up_min_rps_floor       = 0.05
@@ -229,6 +229,7 @@ emergency_window_sec        = 600
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
-| rev 3 | 2026-04-29 | 业务域 seed 覆盖渠道同步 source 聚合目录命名：`domains/<context>/<source>/<source>_seed.yaml` | `codegen-output-contract.md` rev 9 |
+| rev 4 | 2026-04-29 | 业务域 seed 覆盖渠道同步 source 聚合目录命名：`domains/<context>/<source>/<source>_seed.yaml` | `codegen-output-contract.md` rev 11 |
+| rev 3 | 2026-04-29 | 将无明确站点限速时的默认 host RPS 从 0.5 调整为 1.0；站点 seed 仍只能向下覆盖，`Retry-After`、cooldown、warm-up 规则不变 | `data-model.md` rev 3；`infra/http/token_bucket.py` |
 | rev 2 | 2026-04-28 | 新增 §2.3 限流分级启动（warm-up）：4 级阶梯（10%/30%/60%/100%）+ 升降级触发条件 + 默认参数；§8 默认值表追加 ramp-up 相关；为 `codegen-auto-merge.md` canary 提供基础 | — |
 | rev 1 | 2026-04-28 | 初稿 | — |

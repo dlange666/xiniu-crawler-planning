@@ -35,7 +35,7 @@ class TaskSpec:
     scope_follow_pagination: bool = True
 
     # ── 限速 ────────────────────────
-    politeness_rps: float = 0.5
+    politeness_rps: float = 1.0
 
     # ── 应用层增量 ──────────────────
     crawl_mode: Literal["full", "incremental"] = "full"
@@ -50,7 +50,7 @@ class SeedSpec:
 
     host: str
     entry_urls: list[str]
-    politeness_rps: float = 0.5
+    politeness_rps: float = 1.0
     max_pages_per_run: int | None = None
     crawl_mode: str = "full"
 

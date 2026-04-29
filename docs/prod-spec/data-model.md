@@ -1,6 +1,6 @@
 # 数据模型 · 表与索引权威标准
 
-> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 5 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：本 spec 是**所有表 DDL 的唯一权威来源**。各业务/能力 spec 描述设计动机与字段语义，本 spec 给最终落库的完整 SQL 与索引。
 
 > **写作约定**：
@@ -106,7 +106,7 @@ CREATE TABLE crawl_task (
     schedule_time        VARCHAR(10) NULL COMMENT 'daily 用：HH:MM',
     schedule_minute      TINYINT NULL COMMENT 'hourly 用：第几分钟',
     robots_strict        TINYINT(1) NOT NULL DEFAULT 1,
-    politeness_rps       DECIMAL(6,3) NOT NULL DEFAULT 0.500,
+    politeness_rps       DECIMAL(6,3) NOT NULL DEFAULT 1.000,
 
     -- 合规预留（C7，TD-009）
     purpose              VARCHAR(500) NULL,
@@ -167,6 +167,10 @@ CREATE TABLE crawl_task_execution (
     last_run_at            DATETIME(3) NULL,
     last_run_id            VARCHAR(50) NULL,
     last_run_status        VARCHAR(20) NULL,
+    last_error_kind        VARCHAR(50) NULL COMMENT 'source_entry_unusable / anti_bot / scope_mismatch / render_required / adapter_bug / audit_gate_failed / infra_error',
+    last_error_detail      TEXT NULL,
+    last_eval_path         VARCHAR(512) NULL COMMENT '关联 docs/eval-test/*.md 或外部 eval URI',
+    needs_manual_review    TINYINT(1) NOT NULL DEFAULT 0,
     last_full_crawl_at     DATETIME(3) NULL,
     canary_stage_until     DATETIME(3) NULL,
     run_count              INT UNSIGNED NOT NULL DEFAULT 0,
@@ -180,6 +184,23 @@ CREATE TABLE crawl_task_execution (
     INDEX idx_adapter (adapter_host)
 );
 ```
+
+`status` / `last_run_status` 只描述状态机位置与最终判定，不承载具体失败类型。
+失败原因写入 `last_error_kind` / `last_error_detail`，并把可复现证据写到
+`last_eval_path`。当失败需要人工改 PRD seed、scope、合规策略或源站审核时，
+`needs_manual_review=1`，调度器不得自动重试同一输入。
+
+推荐 `last_error_kind`：
+
+| error_kind | 含义 | 默认动作 |
+|---|---|---|
+| `source_entry_unusable` | PRD / task 给出的入口不可直接采集，例如入口命中 WAF、入口是无效筛选页、或详情全部被 scope 拒绝 | failed + manual_review，等待修正 seed/scope |
+| `anti_bot` | challenge / captcha / WAF / auth 等保护措施命中 | failed 或 disabled；不绕过，人工审核 |
+| `scope_mismatch` | 详情或分页落在 scope 外，需调整 `scope_mode` / allowlist / URL pattern | failed + manual_review |
+| `render_required` | 静态抓取无法获得目标内容，且需 headless/render 能力 | failed，等待 render 能力或替代 API |
+| `adapter_bug` | adapter 选择器、解析规则、分页规则错误 | failed，可进入 fix-task |
+| `audit_gate_failed` | live smoke 成功但质量门不通过 | failed，可进入 fix-task |
+| `infra_error` | DB、存储、网络基础设施等非源站/adapter 问题 | failed，可按退避重试 |
 
 #### 4.1.4 `crawl_task_run` —— 每次实际运行的历史记录（append-only）
 
@@ -584,6 +605,8 @@ CREATE TABLE webui_audit (
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
-| rev 3 | 2026-04-29 | `crawl_task_execution.adapter_host` 注释同步 source 聚合目录命名，不改变字段类型与索引 | `codegen-output-contract.md` rev 9 |
+| rev 5 | 2026-04-29 | `crawl_task_execution.adapter_host` 注释同步 source 聚合目录命名，不改变字段类型与索引 | `codegen-output-contract.md` rev 11 |
+| rev 4 | 2026-04-29 | 将 `crawl_task.politeness_rps` 默认值从 0.500 调整为 1.000；无明确站点限速时按 1 rps，站点 seed / task 仍可向下覆盖 | `infra-fetch-policy.md` rev 3 |
+| rev 3 | 2026-04-29 | `crawl_task_execution` 新增结构化失败原因字段：`last_error_kind`、`last_error_detail`、`last_eval_path`、`needs_manual_review`；明确状态机不承载具体失败类型，MIIT wap search 这类入口问题用 `source_entry_unusable` 记录 | `docs/codegen-pipeline.md` §4.6 |
 | rev 2 | 2026-04-28 | 新增 `webui_audit`（§4.7）—— webui 写操作的细粒度审计日志；明确 `crawl_task.created_by` 由 webui 写入时填认证用户 email/sub，与 codegen 链路的 `crawl_task_audit_event` 不重叠 | `webui.md` rev 2 |
 | rev 1 | 2026-04-28 | 初稿 —— 13 张本仓库表 + 外部 task 项目 8 张表的 schema 标准；最小化 JSON（仅 `crawl_raw.data` / `metric_snapshot.labels_json` / `task_checkpoint.cursor_extra` / `task_checkpoint.frontier_snapshot_uri` 4 处保留）；数组用子表；状态用 ENUM；含 PolarDB↔SQLite 映射表 | — |

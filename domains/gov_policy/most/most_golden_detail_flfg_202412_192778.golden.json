@@ -1,0 +1,13 @@
+{
+  "kind": "detail",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/flfg/202412/t20241226_192778.html",
+  "title_contains": "中华人民共和国科学技术普及法",
+  "min_body_len": 5000,
+  "required_metadata": {
+    "索引号": "306-03-2024-300",
+    "发文机构": "全国人民代表大会常务委员会",
+    "发布日期": "2024年12月25日",
+    "发文字号": "中华人民共和国主席令第四十三号"
+  },
+  "expected_min_interpret_links": 0
+}

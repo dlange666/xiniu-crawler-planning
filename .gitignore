@@ -22,6 +22,7 @@ runtime/db/*.db-shm
 runtime/raw/
 runtime/cache/
 runtime/logs/
+runtime/probe/
 
 .env
 .env.*
@@ -39,3 +40,4 @@ build/
 dist/
 *.egg-info/
 node_modules/
+output/

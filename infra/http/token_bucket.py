@@ -30,7 +30,7 @@ class HostTokenBucket:
     新建桶起步装满 burst，首次请求不被令牌限制（避免冷启动等待）。
     """
 
-    def __init__(self, default_rps: float = 0.5, default_burst: int = 2) -> None:
+    def __init__(self, default_rps: float = 1.0, default_burst: int = 2) -> None:
         self.default_rps = default_rps
         self.default_burst = default_burst
         self._buckets: dict[str, _Bucket] = {}

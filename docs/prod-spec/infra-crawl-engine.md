@@ -1,6 +1,6 @@
 # Infra 通用爬虫引擎
 
-> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：MVP 已实现核心（commit 1987ac8）；高级特性（host_score 外层 / aging / AI relevance）随阶段演进。
 
 > 适用：`infra/crawl/` 模块。本 spec 规定通用爬虫引擎的对外契约——
@@ -20,6 +20,12 @@ infra/crawl/
 ├── seed_loader.py               YAML → SeedSpec
 ├── dedup.py                     联合键去重（business-agnostic）
 └── pagination_helpers.py        通用翻页发现工具
+
+infra/source_probe/
+├── probe.py                     受控 source probe：static / JSON API / headless_required
+└── __init__.py
+
+scripts/probe_source.py          codegen 调用的受控探查 CLI
 ```
 
 ## 2. 入口契约
@@ -136,7 +142,7 @@ Step 2: while frontier 有 ready item：
 | URL 参数翻页 | `?page=2` | adapter 调 `detect_url_param_paginator` 静态发现 | ✅ infra helper |
 | 路径翻页 | `index_2.html` / `/page/2/` | adapter 调 `detect_path_paginator` | ✅ infra helper |
 | createPageHTML JS 调用 | NDRC、工信部、财政部等 | adapter 调 `parse_create_page_html` + `expand_create_page_html_pages` | ✅ infra helper |
-| AJAX/JSON API | `GET /api/list?page=N` | adapter 自行抓 API | ⚠️ 需 adapter 写代码（DevTools 探查） |
+| AJAX/JSON API | `GET /api/list?page=N` / `YAOWENLIEBIAO.json` | `infra/source_probe` 先发现并留 artifact；后续 runner/API source 统一抓取 | ✅ probe capability；runner 集成后续切片 |
 | Cursor / 游标 | `?after=eyJ...` | adapter 自行解析 cursor 字段 | ⚠️ 同上 |
 | 无限滚动 | IntersectionObserver → AJAX | render 模拟（M5+） | ❌ 暂未实现 |
 | 点击"加载更多" | JS button → AJAX | render 模拟（M5+） | ❌ 暂未实现 |
@@ -159,7 +165,38 @@ def parse_list(html, url):
     return ParseListResult(detail_links=detail_links, next_pages=next_pages)
 ```
 
-### 6.3 不在本 spec 范围
+### 6.3 Source Probe（codegen 前置能力）
+
+`scripts/probe_source.py` 是 codegen 的受控探查入口，输出 `probe-result.json`：
+
+```json
+{
+  "verdict": "json_api",
+  "entry_url": "https://www.gov.cn/yaowen/",
+  "final_url": "https://www.gov.cn/yaowen/liebiao/",
+  "recommended_source_url": "https://www.gov.cn/yaowen/liebiao/YAOWENLIEBIAO.json",
+  "render_required": false,
+  "anti_bot_detected": false,
+  "signals": ["robots:status=200 parser-decided", "js_redirect:..."],
+  "artifacts": [...]
+}
+```
+
+verdict 语义：
+
+| verdict | 含义 | codegen 动作 |
+|---|---|---|
+| `json_api` | 发现稳定、robots 允许、可回放的公开 JSON/API 响应 | 优先基于 JSON artifact 设计列表解析；优先级高于 SSR/direct HTML 与 headless |
+| `static_html` | 未发现 JSON/API，入口 HTML 或 SSR 输出可直接解析 | 写 direct adapter |
+| `headless_required` | JSON/API 与 direct HTML 均不足，需要渲染 | 写 red，等待 render-pool |
+| `robots_disallow` | robots 拒绝或 5xx complete disallow | 写 red，不请求正文 |
+| `blocked` | auth/captcha/challenge/paywall 等保护信号 | 写 red，人工审核 |
+| `fetch_failed` | 网络/HTTP 错误 | 写 red 或 partial |
+
+probe 只能把 artifact 写入 repo 内 `runtime/probe/<host_slug>/`，不得写 `/tmp`。
+probe 仍使用共享 `HttpClient` 与 `RobotsChecker`；它不是绕过层。
+
+### 6.4 不在本 spec 范围
 
 - 启发式探测（"试 ?page=2 看是否 200 OK"）：风险大（可能与正常请求难区分）；不实现
 - AI 辅助翻页发现：M3.5 codegen 启用后纳入 prompt 框架（codegen-output-contract.md §6）
@@ -235,5 +272,6 @@ def parse_list(html, url):
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 3 | 2026-04-29 | 新增 `infra/source_probe` 与 `scripts/probe_source.py` 契约：codegen 先通过受控工具判断 static / JSON API / headless_required，并把 artifact 写入 `runtime/probe/`；AJAX/JSON 不再由 adapter hook 自行联网 | `codegen-output-contract.md` rev 6 |
 | rev 2 | 2026-04-28 | 补充 headless render pool 的 spec 归属；CrawlEngine v1 仍不实现渲染，只把 M5 能力边界指向 `infra-render-pool.md` | TD-008 / `infra-render-pool.md` |
 | rev 1 | 2026-04-28 | 初稿 —— CrawlEngine 契约 + BFS/DFS routing order + 4 scope mode + 递归发现 + 翻页 helper（cph/url_param/path）。落实 research §3-§4 与 commit 1987ac8 的引擎重构 | 替代 design-task-driven-codegen §6 的 worker 循环描述；外延 codegen-output-contract.md §2 |
