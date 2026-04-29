@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-codegen-task-runner`
 - **关联规格**：`docs/prod-spec/data-model.md` §4.1.1, §4.1.3；`docs/prod-spec/codegen-output-contract.md` §3.1
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -17,7 +17,7 @@
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-301 | [scripts/codegen] 从 crawl_task 自动 claim 并执行 | `data-model.md` §4.1.1, §4.1.3；`codegen-output-contract.md` §3.1 | `run_codegen_for_adapter.py` 新增 `--from-task-db` / `--task-db` / `--task-id`；SQLite `BEGIN IMMEDIATE` 原子领取 scheduled 任务并标记 running；gates 完成后标记 completed/failed；保留原手动参数模式 | 单元测试覆盖 claim、指定 task_id、参数派生、完成状态更新；ruff 与全量 pytest 通过 | `verifying` |
+| T-20260429-301 | [scripts/codegen] 从 crawl_task 自动 claim 并执行 | `data-model.md` §4.1.1, §4.1.3；`codegen-output-contract.md` §3.1 | `run_codegen_for_adapter.py` 新增 `--from-task-db` / `--task-db` / `--task-id`；SQLite `BEGIN IMMEDIATE` 原子领取 scheduled 任务并标记 running；gates 完成后标记 completed/failed；保留原手动参数模式 | 单元测试覆盖 claim、指定 task_id、参数派生、完成状态更新；ruff 与全量 pytest 通过；PR #8 | `completed` |
 
 ## 4. 边界护栏
 
