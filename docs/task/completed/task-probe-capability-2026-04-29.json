@@ -10,13 +10,13 @@
     {
       "id": "T-20260429-401",
       "title": "[infra/source-probe] 提供受控 fetch/json/render-required 探查能力",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-probe-capability",
       "spec_ref": "infra-crawl-engine.md §6.3；codegen-output-contract.md §3.1；infra-render-pool.md §1",
       "dependency": [],
       "assignee": "generator",
-      "last_updated": "2026-04-29T13:33:32+08:00",
-      "notes": "已实现 infra/source_probe 与 scripts/probe_source.py，并更新相关 spec。等待全量验证与 PR 创建后关闭。"
+      "last_updated": "2026-04-29T13:36:26+08:00",
+      "notes": "已实现 infra/source_probe 与 scripts/probe_source.py，并更新 codegen/crawl-engine/render-pool 相关 spec。验证：uv run pytest tests/infra/test_source_probe.py -q -> 4 passed；uv run ruff check infra/source_probe scripts/probe_source.py tests/infra/test_source_probe.py -> passed；uv run python -m py_compile scripts/probe_source.py infra/source_probe/probe.py -> passed；uv run python scripts/probe_source.py --help -> passed；www.gov.cn live probe -> json_api；flk.npc.gov.cn live probe -> headless_required；uv run pytest tests/ -q -> 89 passed；git diff --check -> passed。PR：https://github.com/dlange666/xiniu-crawler-planning/pull/9。"
     }
   ]
 }

@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-probe-capability`
 - **关联规格**：`docs/prod-spec/infra-crawl-engine.md` §6.3；`docs/prod-spec/codegen-output-contract.md` §3.1；`docs/prod-spec/infra-render-pool.md` §1
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -17,7 +17,7 @@
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-401 | [infra/source-probe] 提供受控 fetch/json/render-required 探查能力 | `infra-crawl-engine.md` §6.3；`codegen-output-contract.md` §3.1；`infra-render-pool.md` §1 | 新增 `infra/source_probe` 与 `scripts/probe_source.py`；支持 robots gate、静态 HTML、JSON 响应、HTML 内 JSON 候选、JS redirect、SPA shell 判定；输出 `probe-result.json` 与可回放 artifact | 单测覆盖 JSON 候选、JS redirect、SPA shell、robots disallow；ruff、py_compile、全量 pytest；用 `www.gov.cn` 与 `flk.npc.gov.cn` 做 live probe 证据 | `verifying` |
+| T-20260429-401 | [infra/source-probe] 提供受控 fetch/json/render-required 探查能力 | `infra-crawl-engine.md` §6.3；`codegen-output-contract.md` §3.1；`infra-render-pool.md` §1 | 新增 `infra/source_probe` 与 `scripts/probe_source.py`；支持 robots gate、静态 HTML、JSON 响应、HTML 内 JSON 候选、JS redirect、SPA shell 判定；输出 `probe-result.json` 与可回放 artifact | 单测覆盖 JSON 候选、JS redirect、SPA shell、robots disallow；ruff、py_compile、全量 pytest；用 `www.gov.cn` 与 `flk.npc.gov.cn` 做 live probe 证据；PR #9 | `completed` |
 
 ## 4. 边界护栏
 

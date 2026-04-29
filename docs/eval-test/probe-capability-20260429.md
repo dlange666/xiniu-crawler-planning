@@ -84,7 +84,8 @@ uv run pytest tests/ -q
 |---|---|
 | render-pool M5 实现 | 后续 `infra/render_pool` 切片 |
 | 将 probe 自动串入 codegen runner | 后续 `scripts/run_codegen_for_adapter.py` 切片 |
-| 关闭哪些 task / plan | 验证通过并创建 PR 后关闭 `T-20260429-401` |
+| 关闭哪些 task / plan | 已关闭 `T-20260429-401` 与 `plan-20260429-probe-capability` |
+| PR | https://github.com/dlange666/xiniu-crawler-planning/pull/9 |
 
 ## 修订历史
 
