@@ -1,0 +1,12 @@
+# SASAC (国务院国资委) 数据源种子
+# spec: docs/prod-spec/domain-gov-policy.md §8 + codegen-output-contract.md §3
+
+host: www.sasac.gov.cn
+business_context: gov_policy
+data_kind: policy
+scope_mode: same_origin
+politeness_rps: 1.0
+max_pages_per_run: 30
+crawl_mode: full
+entry_urls:
+  - http://www.sasac.gov.cn/n2588035/n2588320/n2588335/index.html

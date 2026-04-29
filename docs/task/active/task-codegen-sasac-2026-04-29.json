@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "codegen-sasac: 为 www.sasac.gov.cn 生成采集适配器。",
+  "pr_name": "codegen-sasac",
+  "branch": "agent/feature-20260429-codegen-sasac-t10",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[codegen/sasac] 生成并验收采集适配器",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-sasac",
+      "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T17:41:00+08:00",
+      "notes": "wrapper 初次记录 red：pytest 仍按旧 source_metadata dict 读取。已手工修正为 SourceMetadata.raw，并收紧 SASAC 政策详情 URL 范围、清理 script 正文抽取；post-review 复验 green。Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/20"
+    }
+  ]
+}
