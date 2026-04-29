@@ -69,8 +69,49 @@ class JsonValidationResult(NamedTuple):
 
 
 def slug(host: str) -> str:
-    """www.most.gov.cn → most"""
-    return host.replace("www.", "").split(".")[0].replace("-", "_")
+    """Return the adapter slug for a host.
+
+    Adapter file names must identify the owning source, not a generic delivery
+    channel such as www/wap/search. Examples:
+    - www.most.gov.cn -> most
+    - wap.miit.gov.cn -> miit
+    - search.sh.gov.cn -> sh_search
+    """
+    labels = [label for label in host.lower().split(".") if label]
+    if not labels:
+        return "unknown"
+
+    service_prefixes = {"www", "wap", "m", "mobile"}
+    searchable_prefixes = {"search", "sousuo"}
+    suffixes = {
+        ("gov", "cn"),
+        ("com", "cn"),
+        ("org", "cn"),
+        ("net", "cn"),
+        ("edu", "cn"),
+        ("ac", "cn"),
+    }
+    removed_suffix: tuple[str, ...] = ()
+    if len(labels) >= 2 and tuple(labels[-2:]) in suffixes:
+        removed_suffix = tuple(labels[-2:])
+        labels = labels[:-2]
+    elif len(labels) >= 1:
+        removed_suffix = (labels[-1],)
+        labels = labels[:-1]
+
+    dropped: list[str] = []
+    while labels and labels[0] in service_prefixes | searchable_prefixes:
+        dropped.append(labels.pop(0))
+
+    if not labels and removed_suffix == ("gov", "cn"):
+        labels = ["gov"]
+    elif not labels:
+        labels = [label for label in host.lower().split(".") if label][:1]
+
+    source = labels[0]
+    if any(prefix in searchable_prefixes for prefix in dropped):
+        source = f"{source}_search"
+    return re.sub(r"[^a-z0-9]+", "_", source).strip("_") or "unknown"
 
 
 def context_spec_name(business_context: str) -> str:

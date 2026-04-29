@@ -12,6 +12,7 @@ from scripts.run_codegen_for_adapter import (
     mark_codegen_task_finished,
     normalize_task_json,
     record_wrapper_eval,
+    slug,
     write_task_skeleton,
 )
 
@@ -50,6 +51,14 @@ def _insert_task(
             return task_id
     finally:
         conn.close()
+
+
+def test_slug_uses_source_name_not_generic_channel_prefix() -> None:
+    assert slug("www.most.gov.cn") == "most"
+    assert slug("wap.miit.gov.cn") == "miit"
+    assert slug("m.miit.gov.cn") == "miit"
+    assert slug("search.sh.gov.cn") == "sh_search"
+    assert slug("sousuo.www.gov.cn") == "gov_search"
 
 
 def test_claim_codegen_task_claims_next_scheduled_by_priority(tmp_path: Path) -> None:

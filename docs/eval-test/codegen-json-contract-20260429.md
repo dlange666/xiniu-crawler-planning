@@ -45,10 +45,10 @@ git diff --check
 
 | Gate | 结果 |
 |---|---|
-| codegen task runner 单测 | `green`：10 passed |
+| codegen task runner 单测 | `green`：11 passed |
 | ruff | `green`：All checks passed |
 | py_compile | `green`：exit 0 |
-| 全量测试 | `green`：91 passed |
+| 全量测试 | `green`：92 passed |
 | diff whitespace | `green`：无输出 |
 
 ## 5. 覆盖点
@@ -60,6 +60,7 @@ git diff --check
 | 前置大括号噪声 | 跳过非 JSON 的 `{...}` 片段，继续扫描后续合法 task JSON |
 | 非标准 JSON | 不猜测修复尾逗号等语义错误，返回 gate failure |
 | wrapper gates | `run_gates` 增加 `task_json` 结果 |
+| adapter 命名 | `wap.miit.gov.cn -> miit`，避免 `wap.py` 这类通用渠道名 |
 
 ## 6. 结论与决策
 

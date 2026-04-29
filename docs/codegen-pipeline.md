@@ -64,6 +64,10 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 
 如确需触达其它路径，必须在 eval §5 写明原因并停下等待人审，不得自行扩大范围。
 
+`host_slug` 必须承载源站主体职责，不得使用 `www`、`wap`、`m`、`mobile`
+等通用渠道前缀作为 adapter 名。示例：`www.most.gov.cn -> most`、
+`wap.miit.gov.cn -> miit`、`search.sh.gov.cn -> sh_search`。
+
 ## 3. Adapter 契约
 
 完整规则见 `docs/prod-spec/codegen-output-contract.md`。最小要求：
