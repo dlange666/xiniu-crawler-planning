@@ -5,6 +5,7 @@
 
 | 日期 | 范围 | 动作 | 操作者 |
 |---|---|---|---|
+| 2026-04-29 | 过期 codegen worktree 与断链目录 | 删除 11 个已合并或无唯一提交的注册 worktree，并清理对应本地分支；删除 3 个断链的旧 codegen 目录（`xiniu-crawler-codegen-most` / `xiniu-crawler-codegen-miit` / `xiniu-crawler-codegen-mof`，约 193 MB）。保留 open PR #15 的 `xiniu-crawler-codegen-nfra-t7`、任务入库 worktree `xiniu-crawler-prd-task-ingest`、用户主工作区 `xiniu-crawler-planning`，以及非 git 运行时目录 `xiniu-crawler` | Cleaner |
 | 2026-04-28 | 删 exec-plan/completed/ legacy 空目录 | 该目录是从 investment-analyzer 模板继承下来的兼容层，新 plan 走 archive/YYYY-Www/。删除目录；index.md 同步去掉相关说明 | Cleaner |
 | 2026-04-28 | 删除冗余 docs/index.md | 内容已被 AGENTS.md Repository Map / Doc Naming Conventions + 根 README.md "Start Here" 覆盖；docs 根目录不需要二级索引。子目录 index.md 保留 | Cleaner |
 | 2026-04-28 | 删除冗余"门牌"文件 | 删 `docs/domains-overview.md` / `docs/domain-gov-policy-layout.md` / `docs/infra-overview.md`：内容已被 `architecture.md`（§2 目录结构 + §2.1 Capability×Spec×Plan）+ `prod-spec/index.md` + `prod-spec/domain-gov-policy.md` §8 完整覆盖；AGENTS.md / README.md / docs/index.md / 受影响 spec 与 plan / design 提案的引用同步更新 | Cleaner |
