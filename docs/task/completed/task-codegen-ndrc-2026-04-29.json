@@ -80,12 +80,12 @@
     {
       "id": "T-20260429-108",
       "title": "codegen-ndrc: PR handoff",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-codegen-ndrc",
       "dependency": ["T-20260429-107"],
       "assignee": "agent",
-      "last_updated": "2026-04-29T14:09:00+08:00",
-      "notes": "等待 PR 创建后标记 completed。"
+      "last_updated": "2026-04-29T14:10:57+08:00",
+      "notes": "Draft PR 已创建：https://github.com/dlange666/xiniu-crawler-planning/pull/11。"
     }
   ]
 }

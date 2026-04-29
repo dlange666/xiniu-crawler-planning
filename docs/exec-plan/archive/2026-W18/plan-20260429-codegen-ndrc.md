@@ -1,7 +1,7 @@
 # Plan: codegen-ndrc
 
 > **关联 spec**: `docs/prod-spec/codegen-output-contract.md`
-> **状态**: active
+> **状态**: completed
 
 ## 目标
 
@@ -18,7 +18,7 @@
 | T-20260429-105 | 编写测试 (test_adapter_ndrc.py) | 覆盖 registry/parse_list/parse_detail |
 | T-20260429-106 | 跑 gates (pytest + live smoke + audit) | audit 退出码 0 |
 | T-20260429-107 | 写 eval 并判定 | green/red/partial |
-| T-20260429-108 | PR handoff | 建议标题和 body |
+| T-20260429-108 | PR handoff | PR #11 |
 
 ## 边界护栏
 

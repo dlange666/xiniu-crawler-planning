@@ -119,7 +119,7 @@ NDRC 详情页是典型的**附件优先 (attachment-first)** 政策文件页面
 
 ```
 codegen ndrc green
-PR: pending
+PR: https://github.com/dlange666/xiniu-crawler-planning/pull/11
 Eval: docs/eval-test/codegen-ndrc-20260429.md
 Key metrics: raw_records=20, errors=0, audit=pass
 Next: review/merge
