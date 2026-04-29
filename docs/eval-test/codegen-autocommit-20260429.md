@@ -70,6 +70,7 @@ pytest tests/ -q: 145 passed
 | 事项 | 落点 |
 |---|---|
 | 开 PR | `agent/infra-20260429-codegen-autocommit` |
+| PR 链接 | https://github.com/dlange666/xiniu-crawler-planning/pull/22 |
 | 后续实测 | 下一个 source codegen 观察 green/red 分支提交行为 |
 
 ## 修订历史

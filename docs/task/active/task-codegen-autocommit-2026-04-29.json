@@ -49,7 +49,7 @@
     {
       "id": "T-20260429-1004",
       "title": "[eval] 验证 autocommit 行为",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-codegen-autocommit",
       "spec_ref": "docs/eval-test/template.md",
       "dependency": [
@@ -58,8 +58,8 @@
         "T-20260429-1003"
       ],
       "assignee": "evaluator",
-      "last_updated": "2026-04-29T18:40:00+08:00",
-      "notes": "等待最终 ruff/pytest/full test 与 PR 创建后关闭。"
+      "last_updated": "2026-04-29T18:44:00+08:00",
+      "notes": "eval 已写入 docs/eval-test/codegen-autocommit-20260429.md；全量 pytest 145 passed；Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/22。"
     }
   ]
 }
