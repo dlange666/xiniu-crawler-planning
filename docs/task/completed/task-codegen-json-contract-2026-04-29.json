@@ -10,13 +10,13 @@
     {
       "id": "T-20260429-701",
       "title": "[infra/codegen] Task JSON 标准输出与 wrapper 校验",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-codegen-json-contract",
       "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4.3",
       "dependency": [],
       "assignee": "generator",
-      "last_updated": "2026-04-29T15:25:00+08:00",
-      "notes": "实现与验证已完成；等待 draft PR 创建后关闭。"
+      "last_updated": "2026-04-29T15:35:00+08:00",
+      "notes": "实现与验证已完成；draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/13。"
     }
   ]
 }

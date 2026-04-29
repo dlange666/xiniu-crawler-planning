@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-codegen-json-contract`
 - **关联规格**：`docs/prod-spec/codegen-output-contract.md` §3.1；`docs/codegen-pipeline.md` §4.3
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -18,7 +18,7 @@ markdown fence / 前后解释文本包裹场景。
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-701 | [infra/codegen] Task JSON 标准输出与 wrapper 校验 | `codegen-output-contract.md` §3.1；`docs/codegen-pipeline.md` §4.3 | `scripts/run_codegen_for_adapter.py` 调 opencode 前写 task JSON 骨架；新增标准 JSON 校验、窄修复、`task_json` gate；更新 pipeline/spec 和单测 | `uv run pytest tests/infra/test_codegen_task_runner.py -q`、ruff、py_compile、全量 pytest | `verifying` |
+| T-20260429-701 | [infra/codegen] Task JSON 标准输出与 wrapper 校验 | `codegen-output-contract.md` §3.1；`docs/codegen-pipeline.md` §4.3 | `scripts/run_codegen_for_adapter.py` 调 opencode 前写 task JSON 骨架；新增标准 JSON 校验、窄修复、`task_json` gate；更新 pipeline/spec 和单测 | `uv run pytest tests/infra/test_codegen_task_runner.py -q`、ruff、py_compile、全量 pytest | `completed` |
 
 ## 4. 边界护栏
 
