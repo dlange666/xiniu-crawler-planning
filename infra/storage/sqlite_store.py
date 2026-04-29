@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS crawl_task (
     schedule_time           TEXT,
     schedule_minute         INTEGER,
     robots_strict           INTEGER NOT NULL DEFAULT 1,
-    politeness_rps          REAL NOT NULL DEFAULT 0.500,
+    politeness_rps          REAL NOT NULL DEFAULT 1.000,
     purpose                 TEXT,
     legal_basis             TEXT,
     responsible_party       TEXT,

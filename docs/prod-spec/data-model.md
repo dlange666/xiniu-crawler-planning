@@ -1,6 +1,6 @@
 # 数据模型 · 表与索引权威标准
 
-> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：本 spec 是**所有表 DDL 的唯一权威来源**。各业务/能力 spec 描述设计动机与字段语义，本 spec 给最终落库的完整 SQL 与索引。
 
 > **写作约定**：
@@ -106,7 +106,7 @@ CREATE TABLE crawl_task (
     schedule_time        VARCHAR(10) NULL COMMENT 'daily 用：HH:MM',
     schedule_minute      TINYINT NULL COMMENT 'hourly 用：第几分钟',
     robots_strict        TINYINT(1) NOT NULL DEFAULT 1,
-    politeness_rps       DECIMAL(6,3) NOT NULL DEFAULT 0.500,
+    politeness_rps       DECIMAL(6,3) NOT NULL DEFAULT 1.000,
 
     -- 合规预留（C7，TD-009）
     purpose              VARCHAR(500) NULL,
@@ -584,5 +584,6 @@ CREATE TABLE webui_audit (
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
-| rev 1 | 2026-04-28 | 初稿 —— 13 张本仓库表 + 外部 task 项目 8 张表的 schema 标准；最小化 JSON（仅 `crawl_raw.data` / `metric_snapshot.labels_json` / `task_checkpoint.cursor_extra` / `task_checkpoint.frontier_snapshot_uri` 4 处保留）；数组用子表；状态用 ENUM；含 PolarDB↔SQLite 映射表 | — |
+| rev 3 | 2026-04-29 | 将 `crawl_task.politeness_rps` 默认值从 0.500 调整为 1.000；无明确站点限速时按 1 rps，站点 seed / task 仍可向下覆盖 | `infra-fetch-policy.md` rev 3 |
 | rev 2 | 2026-04-28 | 新增 `webui_audit`（§4.7）—— webui 写操作的细粒度审计日志；明确 `crawl_task.created_by` 由 webui 写入时填认证用户 email/sub，与 codegen 链路的 `crawl_task_audit_event` 不重叠 | `webui.md` rev 2 |
+| rev 1 | 2026-04-28 | 初稿 —— 13 张本仓库表 + 外部 task 项目 8 张表的 schema 标准；最小化 JSON（仅 `crawl_raw.data` / `metric_snapshot.labels_json` / `task_checkpoint.cursor_extra` / `task_checkpoint.frontier_snapshot_uri` 4 处保留）；数组用子表；状态用 ENUM；含 PolarDB↔SQLite 映射表 | — |

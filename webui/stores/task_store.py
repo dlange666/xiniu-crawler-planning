@@ -51,7 +51,7 @@ class TaskStore:
                         data.get("scope_url_pattern") or None,
                         data.get("crawl_mode", "full"),
                         _optional_int(data.get("max_pages_per_run")),
-                        float(data.get("politeness_rps") or 0.5),
+                        float(data.get("politeness_rps") or 1.0),
                         data.get("purpose") or None,
                         data.get("responsible_party") or None,
                         actor,

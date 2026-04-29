@@ -125,7 +125,7 @@ git status --short --branch
 写 adapter / seed / golden / test：
 
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
-- `politeness_rps` 不得高于默认 0.5。
+- `politeness_rps` 不得高于默认 1.0；无明确站点限制时使用 1.0。
 - golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
 - 测试至少覆盖 registry 校验、`parse_list` 发现详情、`parse_detail` 抽标题/正文/metadata。
 
