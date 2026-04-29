@@ -56,7 +56,7 @@ Response:
   "items": [
     { "url": "...", "task_id": "...", "url_fp": "...",
       "host": "...", "adapter": "gov_policy.statecouncil",
-      "constraints": { "politeness_rps": 0.5, "robots_strict": true } },
+      "constraints": { "politeness_rps": 1.0, "robots_strict": true } },
     ...
   ]
 }

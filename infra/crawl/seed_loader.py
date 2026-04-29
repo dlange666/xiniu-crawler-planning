@@ -15,7 +15,7 @@ def load_seed(yaml_path: Path | str) -> SeedSpec:
     return SeedSpec(
         host=data["host"],
         entry_urls=list(data["entry_urls"]),
-        politeness_rps=float(data.get("politeness_rps", 0.5)),
+        politeness_rps=float(data.get("politeness_rps", 1.0)),
         max_pages_per_run=data.get("max_pages_per_run"),
         crawl_mode=data.get("crawl_mode", "full"),
     )

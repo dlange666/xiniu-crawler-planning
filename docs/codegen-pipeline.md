@@ -27,7 +27,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 | task | agent | 写 task 状态文件，推进 pending -> in_progress -> verifying -> completed/failed |
 | code | agent | 只写允许范围内的 adapter / seed / test / golden |
 | gates | wrapper + agent | agent 可自跑；wrapper 仍会重复跑确定性 gates |
-| eval | agent | 写 green/red/partial 证据，判定以 gates/audit 为准 |
+| eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准 |
 | PR | wrapper / 人 | gates green 后创建 draft PR；agent 不直接合并 |
 | merge | 人审 / repo owner | PR 合并后进入 main；agent 不自合并 |
 | notify-message | wrapper / 人 | 邮件/IM 尚未接入；只输出待发送消息草稿 |
@@ -43,6 +43,9 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
 - 如果任一 gate 或 audit 失败，eval 必须是 `red` 或 `partial`，禁止自判 green。
+- wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
+  创建或追加 `Wrapper Gate Result`；即使 opencode 异常退出或漏写 eval，
+  red 结果也必须留下 eval-test 证据。
 
 ## 2. 允许写入范围
 
@@ -147,7 +150,7 @@ uv run python scripts/probe_source.py \
   static HTML / SSR / headless；仍不得在 hook 内联网。
 - 若 verdict 为 `static_html`，使用 direct HTML / SSR 输出实现 adapter。
 - seed 必须含 `scope_mode`、`politeness_rps`、`max_pages_per_run`、`crawl_mode`、`entry_urls`。
-- `politeness_rps` 不得高于默认 0.5。
+- `politeness_rps` 不得高于默认 1.0；无明确站点限制时使用 1.0。
 - golden 至少 5 组 HTML+JSON；其中必须覆盖 1 个列表页和至少 1 个详情页。
 - 测试至少覆盖 registry 校验、`parse_list` 发现详情、`parse_detail` 抽标题/正文/metadata。
 
@@ -200,6 +203,35 @@ green 条件：
 - PR handoff：若 green，写建议 PR 标题和 body；若 red，写下一轮动作
 - notify-message 草稿：邮件/IM 尚未接入，只写一段可复制的消息
 
+wrapper 会复核本文件；若 eval 缺失，wrapper 会自动创建 red eval；若 eval
+已存在，wrapper 会追加最终 gate 表、失败项、opencode exit code、日志路径与
+worktree 路径。
+
+若本次任务来自 `crawl_task` / `crawl_task_execution`，wrapper 必须在 eval
+落盘后同步任务表：
+
+| 字段 | green | red / partial |
+|---|---|---|
+| `crawl_task_execution.status` | `completed` | `failed` |
+| `last_run_status` | `green` | `red` 或 `partial` |
+| `last_error_kind` | `NULL` | 见下方分类 |
+| `last_error_detail` | `NULL` | 一句话说明失败原因、入口 URL、关键 gate |
+| `last_eval_path` | 本次 eval 路径 | 本次 eval 路径 |
+| `needs_manual_review` | `0` | 需人工改 PRD seed / scope / 合规策略时为 `1` |
+
+`status` 只表示状态机位置，不要把具体站点问题扩成新状态。失败类型写
+`last_error_kind`：
+
+| error_kind | 适用场景 |
+|---|---|
+| `source_entry_unusable` | PRD/task 入口不可直接采集：入口命中 WAF、筛选页无可用详情、详情全部被 scope 拒绝 |
+| `anti_bot` | challenge / captcha / WAF / auth 等保护措施命中 |
+| `scope_mismatch` | 详情或分页在当前 scope 外，需改 `scope_mode` / allowlist / URL pattern |
+| `render_required` | 静态抓取无法获得目标内容，需要 render/headless 或 API 能力 |
+| `adapter_bug` | adapter 选择器、分页、URL 模式或解析逻辑错误 |
+| `audit_gate_failed` | live smoke 有数据但质量门失败 |
+| `infra_error` | DB、存储、网络基础设施或 wrapper 异常 |
+
 失败模板：
 
 ```markdown
@@ -207,6 +239,8 @@ green 条件：
 
 ### 5.1 整体失败信号
 - 失败步骤:
+- last_error_kind:
+- needs_manual_review:
 - audit 输出:
 - raw_records_written:
 - errors / anti_bot_events:

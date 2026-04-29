@@ -132,9 +132,9 @@ class CrawlEngine:
         self.run_id = run_id or datetime.now(UTC).strftime("run-%Y%m%dT%H%M%SZ")
 
         # token bucket
-        bucket = HostTokenBucket(default_rps=0.5, default_burst=2)
+        bucket = HostTokenBucket(default_rps=1.0, default_burst=2)
         bucket.configure(
-            seed.host, rps=min(seed.politeness_rps, 0.5), burst=1)
+            seed.host, rps=min(seed.politeness_rps, 1.0), burst=1)
         self.http = HttpClient(token_bucket=bucket)
 
         # robots

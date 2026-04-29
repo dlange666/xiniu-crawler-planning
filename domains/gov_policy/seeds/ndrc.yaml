@@ -5,7 +5,7 @@ host: www.ndrc.gov.cn
 business_context: gov_policy
 data_kind: policy
 scope_mode: same_origin
-politeness_rps: 0.3
+politeness_rps: 0.3       # 仅向下覆盖默认 1.0（更保守）
 max_pages_per_run: 5
 crawl_mode: full
 entry_urls:

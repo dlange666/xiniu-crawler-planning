@@ -1,0 +1,12 @@
+{
+  "kind": "detail",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/gfxwj/gfxwj2026/202602/t20260228_195992.html",
+  "title_contains": "关于加快推动科技保险高质量发展",
+  "min_body_len": 4000,
+  "required_metadata": {
+    "索引号": "30643-2026-001",
+    "发文机构": "科技部 金融监管总局 工业和信息化部 国家知识产权局",
+    "发布日期": "2026年03月02日"
+  },
+  "expected_min_interpret_links": 1
+}
