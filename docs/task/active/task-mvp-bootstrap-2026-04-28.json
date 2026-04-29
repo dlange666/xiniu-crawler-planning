@@ -86,14 +86,14 @@
     },
     {
       "id": "T-20260427-108",
-      "title": "[domains/gov_policy/{parse,golden}] 解析框架 + NDRC 黄金用例",
+      "title": "[domains/gov_policy/parse + tests/fixtures] 解析框架 + NDRC 黄金用例",
       "status": "completed",
       "plan_id": "plan-20260427-mvp-policy-crawler",
       "spec_ref": "codegen-output-contract.md §2.2, §3",
       "dependency": ["T-20260427-107"],
       "assignee": "generator",
       "last_updated": "2026-04-28T12:33:00Z",
-      "notes": "parse/orchestrator.py per-host 路由；domains/gov_policy/ndrc/ndrc_golden_{list_page,detail_sample}.html 真实抓取的 2 份快照（spec §3 要求 ≥5，MVP 期手写阶段先 2 份；codegen 平台启用后由 agent 补足到 5）；6/6 测试通过。"
+      "notes": "parse/orchestrator.py per-host 路由；NDRC golden 快照已按现行契约放在 tests/domains/gov_policy/ndrc/fixtures/（spec §3 要求 ≥5，MVP 期手写阶段先 2 份；codegen 平台启用后由 agent 补足到 5）；6/6 测试通过。"
     },
     {
       "id": "T-20260427-109",

@@ -8,9 +8,10 @@ spec: docs/prod-spec/codegen-output-contract.md §2 (ADAPTER_META + hook 协议)
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Tag
 
@@ -79,10 +80,8 @@ def parse_list(html: str, url: str) -> ParseListResult:
     match = re.search(r"pageIndex=(\d+)", path)
     current_page = 1
     if match:
-        try:
+        with contextlib.suppress(ValueError):
             current_page = int(match.group(1))
-        except ValueError:
-            pass
 
     page_size = len(items)
     if page_size > 0 and current_page * page_size < total:

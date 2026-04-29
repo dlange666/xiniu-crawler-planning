@@ -10,7 +10,7 @@ from domains.gov_policy.sasac import sasac_adapter as sasac
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-SASAC_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/sasac"
+GOLDEN_DIR = Path(__file__).parent / "fixtures"
 
 
 def test_adapter_meta_complete() -> None:
@@ -50,7 +50,7 @@ def test_build_list_url_page0() -> None:
 
 
 def test_parse_list_extracts_detail_links() -> None:
-    sample = SASAC_DIR / "sasac_golden_list_1.html"
+    sample = GOLDEN_DIR / "sasac_golden_list_1.html"
     if not sample.exists():
         pytest.skip(f"no golden list snapshot at {sample}")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -63,7 +63,7 @@ def test_parse_list_extracts_detail_links() -> None:
 
 
 def test_parse_list_emits_pagination() -> None:
-    sample = SASAC_DIR / "sasac_golden_list_1.html"
+    sample = GOLDEN_DIR / "sasac_golden_list_1.html"
     if not sample.exists():
         pytest.skip("no golden list snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -74,7 +74,7 @@ def test_parse_list_emits_pagination() -> None:
 
 
 def test_parse_detail_extracts_title_and_body() -> None:
-    sample = SASAC_DIR / "sasac_golden_detail_1.html"
+    sample = GOLDEN_DIR / "sasac_golden_detail_1.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")

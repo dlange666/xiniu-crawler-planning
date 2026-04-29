@@ -1,5 +1,5 @@
 # 政策图谱 · 产品规格
-> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
 
 
 > 本文件是爬虫仓库视角的**业务规格**。完整产品策划请见
@@ -130,7 +130,8 @@
 | `crawl` | `domains/gov_policy/crawl/` | 通用采集编排：seed 加载、调用 `infra/frontier` 派发、调用 `infra/http` 抓取 |
 | `render` | `domains/gov_policy/render/` | headless 渲染编排（M5 启用，MVP 占位） |
 | `parse` | `domains/gov_policy/parse/` | 通用解析流程：调度对应 source 目录内 `<source>_adapter.py` 的 hook |
-| `source directories` | `domains/gov_policy/<source>/` | 单个源站的聚合目录：`<source>_adapter.py`、`<source>_seed.yaml`、`<source>_golden_*`。`<source>` 使用 canonical host slug，例如 `ndrc` / `miit` |
+| `source directories` | `domains/gov_policy/<source>/` | 单个源站的运行时代码目录：`<source>_adapter.py`、`<source>_seed.yaml`。`<source>` 使用 canonical host slug，例如 `ndrc` / `miit` |
+| `source tests` | `tests/domains/gov_policy/<source>/` | 与 domain/source 镜像的测试目录；golden HTML/JSON 放在 `fixtures/`，测试入口为 `test_adapter.py` |
 | `dedup` | `domains/gov_policy/dedup/` | 联合键 `(policy_title_norm, pub_code, content_sha256)` 严格去重 + simhash 信号 |
 | `extract` | `domains/gov_policy/extract/{prompts,schemas}/` | 36 字段 prompt + JSON schema |
 | `sink` | `domains/gov_policy/sink/` | 通过 `infra/storage` 写元数据 + 原始档 |
@@ -159,5 +160,6 @@ sink     → infra/storage · model
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 3 | 2026-04-29 | 将 source golden 从 `domains/gov_policy/<source>/` 运行时代码目录迁移到 `tests/domains/gov_policy/<source>/fixtures/`，并将 adapter 测试迁移为 source 镜像目录 `test_adapter.py` | `codegen-output-contract.md` rev 16 |
 | rev 2 | 2026-04-29 | 将 `adapters/`、`seeds/`、`golden/` 横向分散目录调整为 `domains/gov_policy/<source>/` 源聚合目录；同源 adapter、seed、golden 均使用 `<source>_*` 前缀命名 | `codegen-output-contract.md` rev 9 |
 | rev 1 | 2026-04-28 | 初稿 | — |

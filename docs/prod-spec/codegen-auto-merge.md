@@ -1,6 +1,6 @@
 # 自动合并策略 · 跳过人审的安全网
 
-> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 4 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：M3.5 codegen-bootstrap 阶段实施（关联 plan-20260428-codegen-bootstrap，
 > 新增 T-212~216）
 
@@ -31,7 +31,7 @@
 
 | Tier | 触达路径白名单 | 合并方式 | Harness 门槛 | Canary |
 |---|---|---|---|---|
-| **1 自动** | 仅 `domains/<ctx>/<source>/<source>_adapter.py` + `domains/<ctx>/<source>/<source>_seed.yaml` + `domains/<ctx>/<source>/<source>_golden_*` + `tests/<ctx>/test_<source>_adapter.py`，且 source 为**新增** | 全自动 | §3 全部 | §4 三档 |
+| **1 自动** | 仅 `domains/<ctx>/<source>/<source>_adapter.py` + `domains/<ctx>/<source>/<source>_seed.yaml` + `tests/domains/<ctx>/<source>/fixtures/<source>_golden_*` + `tests/domains/<ctx>/<source>/test_adapter.py`，且 source 为**新增** | 全自动 | §3 全部 | §4 三档 |
 | **2 半自动** | tier-1 路径但 host 已存在（update 已有 adapter）；或 `domains/<ctx>/extract/prompts/*`、`domains/<ctx>/harness_rules.py` | 全自动；强制 24h canary | §3 全部 + 现役回归（§3.6） | §4 三档加慢 |
 | **3 人工** | 触达 `infra/`、`docs/prod-spec/*`、`docs/architecture.md`、`AGENTS.md`、其它业务域 | **永远人工** | — | — |
 
@@ -40,13 +40,17 @@
 `infra/sandbox/` 按 tier 提供不同的写白名单。**tier-3 路径直接不在 agent
 可写名单中**——agent 想都不能想。
 
+当前基础实现已提供 `infra/sandbox/paths.py::WritePolicy` 与
+`tier1_create_host_policy()`，用于本地 worker 在 agent 执行前校验预期写入路径；
+真正的子进程文件系统隔离和 PR diff tier 计算仍在后续任务中实现。
+
 ```python
 TIER_WRITE_ALLOWLIST = {
   "tier1_create_host": [
     "domains/<ctx>/<source>/<source>_adapter.py",  # 仅新增
     "domains/<ctx>/<source>/<source>_seed.yaml",
-    "domains/<ctx>/<source>/<source>_golden_*",
-    "tests/<ctx>/test_<source>_adapter.py",
+    "tests/domains/<ctx>/<source>/fixtures/<source>_golden_*",
+    "tests/domains/<ctx>/<source>/test_adapter.py",
   ],
   "tier2_update_host": [
     # 同 tier1，但允许覆盖已有 host 文件
@@ -96,12 +100,16 @@ TIER_WRITE_ALLOWLIST = {
 完整列表维护在 `infra/harness/blocklist.yaml`。新增禁词只能加不能删；删除
 需走 tier-3 PR。
 
+当前基础实现先落地 `infra/harness/compliance.py::ComplianceScanner`，内置禁词覆盖
+stealth、captcha solver、undetected_chromedriver 等高风险样例；完整 YAML 清单与
+业务域注入在后续 harness 加压任务中补齐。
+
 ### 3.6 现役回归（tier-2 强制）
 
 tier-2 触达已存在的 adapter / prompt / harness_rules 时，**必须**对所有
 受影响 host 跑一次 golden 与 E2E：
 
-- 跑 `domains/<ctx>/*/*_golden_*.html` / `*.golden.json` 全集（不只是新动的 source）
+- 跑 `tests/domains/<ctx>/*/fixtures/*_golden_*.html` / `*.golden.json` 全集（不只是新动的 source）
 - 任意 host 解析输出与黄金 JSON 不匹配 → 拦截
 - 跑 dev profile 下"近 7 天 sample 100 条"复刻，schema 合格率 ≥ 95% 才放行
 
@@ -199,5 +207,7 @@ warm-up"。
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 4 | 2026-04-29 | 实现 sandbox 写入白名单基础 `WritePolicy`、tier-1 create host policy 与 harness 合规扫描基础；PR diff tier 计算、强文件系统隔离、canary/rollback 仍留后续任务 | `plan-20260429-render-codegen-platform` / T-20260429-1202 |
+| rev 3 | 2026-04-29 | tier 白名单与现役回归 golden 路径同步为 `tests/domains/<ctx>/<source>/fixtures/`；测试入口同步为 `tests/domains/<ctx>/<source>/test_adapter.py` | `codegen-output-contract.md` rev 16 |
 | rev 2 | 2026-04-29 | 自动合并 tier 白名单同步 source 聚合目录：adapter、seed、golden 均位于 `domains/<ctx>/<source>/`，测试位于 `tests/<ctx>/test_<source>_adapter.py` | `codegen-output-contract.md` rev 9 |
 | rev 1 | 2026-04-28 | 初稿 —— 跳过人审的 4 层防御：L1 分级闸口（tier 1/2/3）+ L3 加压门槛（golden 10 / E2E 20 / schema 98% / 关键字段 99% / 30+ 禁词）+ L6 三档 canary + L8 审计 webhook；canary 强制 warm-up | — |

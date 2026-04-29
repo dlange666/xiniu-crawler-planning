@@ -12,6 +12,14 @@ from infra.codegen.golden import validate_golden_artifacts
 from infra.codegen.paths import (
     adapter_artifact,
     adapter_test_artifact,
+    apply_db_task_to_args,
+    claim_codegen_task,
+    codegen_commit_paths,
+    fixture_dir,
+    mark_codegen_task_finished,
+    normalize_task_json,
+    plan_artifact_path,
+    record_wrapper_eval,
     seed_artifact,
     slug,
     source_dir,
@@ -80,11 +88,10 @@ def test_codegen_artifact_paths_use_source_directory(tmp_path: Path) -> None:
     assert adapter_artifact(tmp_path, args) == (
         tmp_path / "domains/gov_policy/miit/miit_adapter.py"
     )
-    assert seed_artifact(tmp_path, args) == (
-        tmp_path / "domains/gov_policy/miit/miit_seed.yaml"
-    )
+    assert seed_artifact(tmp_path, args) == (tmp_path / "domains/gov_policy/miit/miit_seed.yaml")
+    assert fixture_dir(tmp_path, args) == (tmp_path / "tests/domains/gov_policy/miit/fixtures")
     assert adapter_test_artifact(tmp_path, args) == (
-        tmp_path / "tests/gov_policy/test_miit_adapter.py"
+        tmp_path / "tests/domains/gov_policy/miit/test_adapter.py"
     )
 
 
@@ -207,6 +214,7 @@ def test_per_task_prompt_requires_closure_gates_and_red_probe(tmp_path: Path) ->
 
     assert "## 强制收口协议" in text
     assert "rm -f runtime/db/dev.db runtime/db/dev.db-wal runtime/db/dev.db-shm" in text
+    assert "uv run pytest tests/domains/gov_policy/nfra/test_adapter.py -q" in text
     assert "scripts/run_crawl_task.py domains/gov_policy/nfra/nfra_seed.yaml" in text
     assert "--db runtime/db/dev.db" in text
     assert "## red 前必须排查" in text
@@ -239,7 +247,9 @@ def test_validate_golden_artifacts_requires_coverage_and_pairs(tmp_path: Path) -
         host_slug="example",
         kind="list",
         index=1,
-        payload={"parse_list": {"detail_links": ["https://example.gov.cn/1.html"], "next_pages": []}},
+        payload={
+            "parse_list": {"detail_links": ["https://example.gov.cn/1.html"], "next_pages": []}
+        },
     )
     for i in range(1, 4):
         _write_golden_pair(
@@ -303,6 +313,44 @@ def test_write_feedback_prompt_includes_failed_gate_evidence(tmp_path: Path) -> 
     assert "Failed gates: pytest_new, audit" in text
     assert "SourceMetadata(raw={...})" in text
     assert "short body" in text
+
+
+def test_codegen_commit_paths_green_includes_delivery_artifacts(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
+    eval_path = tmp_path / f"docs/eval-test/codegen-example-{date.today():%Y%m%d}.md"
+    for path in (
+        plan_artifact_path(tmp_path, args),
+        tmp_path / f"docs/task/active/task-codegen-example-{date.today()}.json",
+        eval_path,
+        tmp_path / "domains/gov_policy/example/example_adapter.py",
+        tmp_path / "tests/domains/gov_policy/example/fixtures/example_golden_list_1.html",
+        tmp_path / "tests/domains/gov_policy/example/test_adapter.py",
+        tmp_path / ".codegen-prompt.md",
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x", encoding="utf-8")
+
+    paths = codegen_commit_paths(tmp_path, args, eval_path=eval_path, overall=True)
+    relative = {str(path.relative_to(tmp_path)) for path in paths}
+
+    assert "docs/eval-test/codegen-example-" + f"{date.today():%Y%m%d}.md" in relative
+    assert "domains/gov_policy/example" in relative
+    assert "tests/domains/gov_policy/example/fixtures" in relative
+    assert "tests/domains/gov_policy/example/test_adapter.py" in relative
+    assert ".codegen-prompt.md" not in relative
+
+
+def test_codegen_commit_paths_red_only_includes_eval(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
+    eval_path = tmp_path / f"docs/eval-test/codegen-example-{date.today():%Y%m%d}.md"
+    adapter_path = tmp_path / "domains/gov_policy/example/example_adapter.py"
+    for path in (eval_path, adapter_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x", encoding="utf-8")
+
+    paths = codegen_commit_paths(tmp_path, args, eval_path=eval_path, overall=False)
+
+    assert paths == [eval_path]
 
 
 def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:

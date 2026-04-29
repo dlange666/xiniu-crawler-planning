@@ -1,6 +1,6 @@
 # Plan: codegen-most (www.most.gov.cn)
 
-> **版本**：rev 1 · **最近修订**：2026-04-28 · **状态**：completed
+> **版本**：rev 2 · **最近修订**：2026-04-29 · **状态**：completed
 
 ## 关联 spec
 
@@ -30,10 +30,10 @@
 |---|---|---|---|
 | T-20260428-501 | 站点探查：fetch 列表页，分析详情 URL 模式 | 列表页 HTML 存 golden；主政策路径识别为 `flfg/bmgz/gfxwj` | completed |
 | T-20260428-502 | 站点探查：fetch 详情页，分析字段 DOM 结构 | 详情页 HTML 存 golden；metadata table 与 `#Zoom` 正文结构确认 | completed |
-| T-20260428-503 | 实现 adapter：`most.py`（`build_list_url` / `parse_list` / `parse_detail`） | `ADAPTER_META` 通过 registry 校验；metadata 抽取无越界 | completed |
-| T-20260428-504 | 实现 seed：`most.yaml`（含 `scope_mode: same_origin`） | YAML 语法正确；RPS 不高于 0.5 | completed |
+| T-20260428-503 | 实现 adapter：`domains/gov_policy/most/most_adapter.py`（`build_list_url` / `parse_list` / `parse_detail`） | `ADAPTER_META` 通过 registry 校验；metadata 抽取无越界 | completed |
+| T-20260428-504 | 实现 seed：`domains/gov_policy/most/most_seed.yaml`（含 `scope_mode: same_origin`） | YAML 语法正确；RPS 不高于 0.5 | completed |
 | T-20260428-505 | 创建 golden：≥5 组 HTML + `.golden.json` | 1 个列表页 + 5 个详情页，HTML/JSON 配对 | completed |
-| T-20260428-506 | 实现 test：`test_adapter_most.py` | MOST 专项测试 10/10 通过 | completed |
+| T-20260428-506 | 实现 test：`tests/domains/gov_policy/most/test_adapter.py` | MOST 专项测试 10/10 通过 | completed |
 | T-20260428-507 | Live smoke：`run_crawl_task.py --max-pages 30` | `raw_records_written=14`，`errors=0`，`anti_bot_events=0` | completed |
 | T-20260428-508 | Audit：`audit_crawl_quality.py` | `title_rate=100%`，`body_500_rate=85.7%`，`metadata_rate=100%` | completed |
 | T-20260428-509 | 写 eval 与 PR handoff | `docs/eval-test/codegen-most-20260428.md` 记录 green 证据；draft PR #4 已创建 | completed |
@@ -49,7 +49,7 @@
 
 | Gate | 结果 |
 |---|---|
-| `uv run pytest tests/gov_policy/test_adapter_most.py -q` | pass：10 passed |
+| `uv run pytest tests/domains/gov_policy/most/test_adapter.py -q` | pass：10 passed |
 | live smoke | pass：14 raw records，0 errors |
 | audit | pass：quality audit verdict PASS |
 | draft PR | https://github.com/dlange666/xiniu-crawler-planning/pull/4 |

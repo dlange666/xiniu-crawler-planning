@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "实现 headless render pool 与 codegen 平台 infra 化的基础切片。",
+  "pr_name": "render-codegen-platform",
+  "branch": "agent/infra-20260429-render-codegen-platform",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-1201",
+      "title": "[infra/render] render decision 与 pool 基础能力",
+      "status": "completed",
+      "plan_id": "plan-20260429-render-codegen-platform",
+      "spec_ref": "infra-render-pool.md §3-§5, §7；infra-crawl-engine.md §10",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T23:55:00+08:00",
+      "notes": "已实现 infra/render 类型、配置、decision、pool、可选 Playwright backend 包装与 CrawlEngine renderer 注入入口；targeted pytest/ruff 通过。"
+    },
+    {
+      "id": "T-20260429-1202",
+      "title": "[infra/codegen] agent/sandbox/harness/worker 基础骨架",
+      "status": "completed",
+      "plan_id": "plan-20260429-render-codegen-platform",
+      "spec_ref": "codegen-output-contract.md §3, §5-§6；codegen-auto-merge.md §2-§3",
+      "dependency": [
+        "T-20260429-1201"
+      ],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T23:55:00+08:00",
+      "notes": "已实现 infra/agent、infra/sandbox、infra/harness、infra/codegen 基础抽象和 worker run-once；targeted pytest/ruff 通过。"
+    },
+    {
+      "id": "T-20260429-1203",
+      "title": "[docs/eval] 记录 render + codegen infra 基础切片验收证据",
+      "status": "completed",
+      "plan_id": "plan-20260429-render-codegen-platform",
+      "spec_ref": "infra-render-pool.md §11；codegen-output-contract.md §5；codegen-auto-merge.md §8",
+      "dependency": [
+        "T-20260429-1201",
+        "T-20260429-1202"
+      ],
+      "assignee": "evaluator",
+      "last_updated": "2026-04-29T23:55:00+08:00",
+      "notes": "已同步 infra-render-pool、infra-crawl-engine、codegen-output-contract、codegen-auto-merge 与 architecture；eval 证据 green。"
+    }
+  ]
+}

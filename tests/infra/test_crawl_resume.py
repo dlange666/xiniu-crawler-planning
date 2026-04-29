@@ -13,7 +13,6 @@ import pytest
 
 from infra.crawl import CrawlEngine
 from infra.crawl.types import (
-    Attachment,
     ParseDetailResult,
     ParseListResult,
     SeedSpec,
@@ -155,8 +154,7 @@ def test_resume_picks_up_pending_urls(
         host="example.com", depth=1, parent_url_fp="fp-L",
         discovery_source="list_to_detail")
     md.mark_url_record_state(task_id=42, url_fp="fp-D1", state="done")
-    url_hash_d1 = hashlib.sha256(
-        "https://example.com/p/1".encode()).hexdigest()
+    url_hash_d1 = hashlib.sha256(b"https://example.com/p/1").hexdigest()
     md.insert_crawl_raw(
         task_id=42, business_context="gov_policy", host="example.com",
         url="https://example.com/p/1", canonical_url="https://example.com/p/1",

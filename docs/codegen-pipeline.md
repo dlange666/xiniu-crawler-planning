@@ -23,6 +23,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR handoff
 | plan/task/code/eval | agent | 写允许范围内的交付物 |
 | gates | wrapper + agent | agent 自跑；wrapper 复跑并拥有最终判定 |
 | red feedback | wrapper + agent | wrapper 回灌失败证据；agent 最多自主修复 3 轮 |
+| publish | wrapper | green 自动提交并推送完整 codegen 分支；red 只提交并推送 eval 诊断报告 |
 | PR/merge | wrapper / 人 | agent 只写 handoff，不创建或合并 PR |
 
 ## 1. 硬规则
@@ -39,6 +40,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR handoff
 - 未跑 live smoke + audit 禁止 green；只凭单测/registry 通过禁止 green。
 - Task 文件必须是标准 JSON，禁止 markdown fence、注释、尾逗号和 JSON 外文本。
 - wrapper 会追加 `Wrapper Gate Result`；red 时会生成 `.codegen-feedback.md`，agent 必须基于真实失败证据继续修复，禁止降低阈值。
+- wrapper 拥有提交边界：green 分支提交 plan/task/eval/adapter/seed/golden fixture/test；red 分支只提交 eval 诊断报告，避免半成品 adapter 进入分支历史。
 
 ## 2. 允许写入范围
 
@@ -49,8 +51,8 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR handoff
 | Eval | `docs/eval-test/codegen-<host>-YYYYMMDD.md` |
 | Adapter | `domains/<business_context>/<host_slug>/<host_slug>_adapter.py` |
 | Seed | `domains/<business_context>/<host_slug>/<host_slug>_seed.yaml` |
-| Golden | `domains/<business_context>/<host_slug>/<host_slug>_golden_*` |
-| Tests | `tests/<business_context>/test_<host_slug>_adapter.py` |
+| Golden fixture | `tests/domains/<business_context>/<host_slug>/fixtures/<host_slug>_golden_*` |
+| Tests | `tests/domains/<business_context>/<host_slug>/test_adapter.py` |
 
 如确需触达其它路径，必须在 eval 写明原因并停下等待人审。
 

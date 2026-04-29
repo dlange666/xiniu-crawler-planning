@@ -1,0 +1,1 @@
+"""NFRA adapter test package."""

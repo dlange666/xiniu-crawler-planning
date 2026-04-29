@@ -10,7 +10,7 @@ from domains.gov_policy.ndrc import ndrc_adapter as ndrc
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-NDRC_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/ndrc"
+GOLDEN_DIR = Path(__file__).parent / "fixtures"
 
 
 def test_adapter_meta_complete() -> None:
@@ -44,7 +44,7 @@ def test_build_list_url_page0() -> None:
 
 
 def test_parse_list_extracts_detail_links() -> None:
-    sample = NDRC_DIR / "ndrc_golden_list_page.html"
+    sample = GOLDEN_DIR / "ndrc_golden_list_page.html"
     if not sample.exists():
         pytest.skip(f"no golden list snapshot at {sample}")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -58,7 +58,7 @@ def test_parse_list_extracts_detail_links() -> None:
 
 def test_parse_list_emits_pagination() -> None:
     """新功能：parse_list 通过 createPageHTML 发现翻页 URL。"""
-    sample = NDRC_DIR / "ndrc_golden_list_page.html"
+    sample = GOLDEN_DIR / "ndrc_golden_list_page.html"
     if not sample.exists():
         pytest.skip("no golden list snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
@@ -72,7 +72,7 @@ def test_parse_list_emits_pagination() -> None:
 
 
 def test_parse_detail_extracts_title_and_body() -> None:
-    sample = NDRC_DIR / "ndrc_golden_detail_sample.html"
+    sample = GOLDEN_DIR / "ndrc_golden_detail_sample.html"
     if not sample.exists():
         pytest.skip("no golden detail snapshot")
     html = sample.read_bytes().decode("utf-8", errors="replace")
