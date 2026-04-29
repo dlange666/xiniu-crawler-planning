@@ -56,7 +56,8 @@ uv run python -m json.tool docs/task/active/task-codegen-fallback-prompt-2026-04
 |---|---|
 | 是否开新 task | 否 |
 | 是否开 fix-task | 否 |
-| 关闭哪些 task / plan | PR 创建后关闭 `T-20260429-801` / `T-20260429-802` / `T-20260429-803` |
+| PR | https://github.com/dlange666/xiniu-crawler-planning/pull/19 |
+| 关闭哪些 task / plan | `T-20260429-801` / `T-20260429-802` / `T-20260429-803` 已完成 |
 
 ## 修订历史
 
