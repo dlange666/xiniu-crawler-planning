@@ -9,6 +9,7 @@ from scripts.run_codegen_for_adapter import (
     apply_db_task_to_args,
     claim_codegen_task,
     mark_codegen_task_finished,
+    record_wrapper_eval,
 )
 
 
@@ -169,3 +170,58 @@ def test_mark_codegen_task_finished_updates_status_and_counters(tmp_path: Path) 
         0,
         "worker-d",
     )
+
+
+def test_record_wrapper_eval_creates_red_eval_when_missing(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn")
+    log_file = tmp_path / "runtime/codegen/example.log"
+
+    eval_path = record_wrapper_eval(
+        worktree=tmp_path,
+        args=args,
+        branch="agent/feature-20260429-codegen-example-t1",
+        log_file=log_file,
+        opencode_rc=1,
+        gates={"pytest_all": True, "audit": False},
+        overall=False,
+    )
+
+    assert eval_path.parent == tmp_path / "docs/eval-test"
+    assert eval_path.name.startswith("codegen-example-")
+    assert eval_path.exists()
+    text = eval_path.read_text(encoding="utf-8")
+    assert "> **判定**：`red`" in text
+    assert "| audit | FAIL |" in text
+    assert "| opencode_exit_code | `1` |" in text
+    assert "| failed_gates | `audit` |" in text
+
+
+def test_record_wrapper_eval_appends_to_existing_eval(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn")
+
+    eval_path = record_wrapper_eval(
+        worktree=tmp_path,
+        args=args,
+        branch="agent/feature-20260429-codegen-example-t1",
+        log_file=tmp_path / "runtime/codegen/example.log",
+        opencode_rc=0,
+        gates={"pytest_all": True},
+        overall=True,
+    )
+    eval_path.write_text("# Agent Eval\n\nagent content\n", encoding="utf-8")
+
+    appended_path = record_wrapper_eval(
+        worktree=tmp_path,
+        args=args,
+        branch="agent/feature-20260429-codegen-example-t1",
+        log_file=tmp_path / "runtime/codegen/example.log",
+        opencode_rc=0,
+        gates={"golden": False},
+        overall=False,
+    )
+
+    assert appended_path == eval_path
+    text = appended_path.read_text(encoding="utf-8")
+    assert text.startswith("# Agent Eval")
+    assert "## Wrapper Gate Result" in text
+    assert "| golden | FAIL |" in text

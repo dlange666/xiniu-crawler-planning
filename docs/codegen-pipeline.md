@@ -27,7 +27,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 | task | agent | 写 task 状态文件，推进 pending -> in_progress -> verifying -> completed/failed |
 | code | agent | 只写允许范围内的 adapter / seed / test / golden |
 | gates | wrapper + agent | agent 可自跑；wrapper 仍会重复跑确定性 gates |
-| eval | agent | 写 green/red/partial 证据，判定以 gates/audit 为准 |
+| eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准 |
 | PR | wrapper / 人 | gates green 后创建 draft PR；agent 不直接合并 |
 | merge | 人审 / repo owner | PR 合并后进入 main；agent 不自合并 |
 | notify-message | wrapper / 人 | 邮件/IM 尚未接入；只输出待发送消息草稿 |
@@ -41,6 +41,9 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
 - 如果任一 gate 或 audit 失败，eval 必须是 `red` 或 `partial`，禁止自判 green。
+- wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
+  创建或追加 `Wrapper Gate Result`；即使 opencode 异常退出或漏写 eval，
+  red 结果也必须留下 eval-test 证据。
 
 ## 2. 允许写入范围
 
@@ -177,6 +180,10 @@ green 条件：
 - 文件清单：本次新增/修改的 plan/task/code/golden/test
 - PR handoff：若 green，写建议 PR 标题和 body；若 red，写下一轮动作
 - notify-message 草稿：邮件/IM 尚未接入，只写一段可复制的消息
+
+wrapper 会复核本文件；若 eval 缺失，wrapper 会自动创建 red eval；若 eval
+已存在，wrapper 会追加最终 gate 表、失败项、opencode exit code、日志路径与
+worktree 路径。
 
 失败模板：
 
