@@ -43,6 +43,7 @@ from infra.codegen.task_db import (  # noqa: E402
     CodegenDbTask,
     apply_db_task_to_args,
     claim_codegen_task,
+    mark_codegen_drafting,
     mark_codegen_task_finished,
 )
 from infra.codegen.worktree import setup_worktree  # noqa: E402
@@ -164,6 +165,8 @@ def main() -> int:
         for attempt in range(1, attempts + 1):
             if not args.skip_codegen:
                 log_file = log_dir / f"{host_slug}-{run_stamp}-attempt{attempt}.log"
+                if claimed_task is not None:
+                    mark_codegen_drafting(args.task_db, task_id=claimed_task.task_id)
                 opencode_rc = invoke_opencode(
                     worktree, args.model, log_file, feedback_file=feedback_file,
                 )

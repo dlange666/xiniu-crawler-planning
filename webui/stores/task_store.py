@@ -64,6 +64,11 @@ class TaskStore:
                     VALUES (?, 'scheduled', ?)""",
                     (task_id, host),
                 )
+                conn.execute(
+                    """INSERT OR IGNORE INTO crawl_task_generation (task_id, status)
+                    VALUES (?, 'pending')""",
+                    (task_id,),
+                )
             return task_id
         finally:
             conn.close()
@@ -94,11 +99,13 @@ class TaskStore:
                     t.crawl_mode, t.scope_mode, t.max_pages_per_run,
                     t.politeness_rps, t.created_by, t.created_at,
                     COALESCE(e.status, 'scheduled') AS status,
+                    COALESCE(g.status, 'pending') AS generation_status,
                     COALESCE(raw.raw_count, 0) AS raw_count,
                     COALESCE(urls.url_count, 0) AS url_count,
                     COALESCE(fetches.fetch_count, 0) AS fetch_count
                 FROM crawl_task t
                 LEFT JOIN crawl_task_execution e ON e.task_id = t.task_id
+                LEFT JOIN crawl_task_generation g ON g.task_id = t.task_id
                 LEFT JOIN (
                     SELECT task_id, COUNT(*) AS raw_count
                     FROM crawl_raw GROUP BY task_id

@@ -85,6 +85,25 @@ def claim_codegen_task(
                 heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')""",
             (int(row["task_id"]), row["host"], worker_id),
         )
+        # Codegen 过程状态：claim → claimed（spec data-model.md §4.1.2）。
+        # invoke_opencode 后 wrapper 会再 advance 到 drafting / merged / failed。
+        conn.execute(
+            """INSERT INTO crawl_task_generation
+            (task_id, status, worker_id, claim_at, heartbeat_at, attempts, started_at)
+            VALUES (?, 'claimed', ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    strftime('%Y-%m-%dT%H:%M:%fZ','now'), 1,
+                    strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+            ON CONFLICT(task_id) DO UPDATE SET
+                status='claimed',
+                worker_id=excluded.worker_id,
+                claim_at=excluded.claim_at,
+                heartbeat_at=excluded.heartbeat_at,
+                attempts=crawl_task_generation.attempts + 1,
+                started_at=excluded.started_at,
+                last_error=NULL,
+                finished_at=NULL""",
+            (int(row["task_id"]), worker_id),
+        )
         conn.commit()
         return CodegenDbTask(
             task_id=int(row["task_id"]),
@@ -137,6 +156,8 @@ def mark_codegen_task_finished(
     if not success:
         gates = ", ".join(failed_gates or ["unknown"])
         error_detail = f"wrapper gates failed: {gates}"
+    generation_status = "merged" if success else "failed"
+    eval_path_str = str(eval_path) if eval_path else None
     conn = sqlite3.connect(db_path)
     try:
         with conn:
@@ -163,10 +184,44 @@ def mark_codegen_task_finished(
                     worker_id,
                     error_kind,
                     error_detail,
-                    str(eval_path) if eval_path else None,
+                    eval_path_str,
                     0 if success else 1,
                     task_id,
                 ),
+            )
+            # Codegen 过程状态写 merged/failed；spec §4.1.2。
+            conn.execute(
+                """UPDATE crawl_task_generation SET
+                    status=?,
+                    branch=?,
+                    last_error=?,
+                    last_eval_path=?,
+                    finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+                    heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE task_id=?""",
+                (
+                    generation_status,
+                    branch,
+                    error_detail,
+                    eval_path_str,
+                    task_id,
+                ),
+            )
+    finally:
+        conn.close()
+
+
+def mark_codegen_drafting(db_path: Path, *, task_id: int) -> None:
+    """invoke_opencode 前把 generation 状态推到 drafting。"""
+    conn = sqlite3.connect(db_path)
+    try:
+        with conn:
+            conn.execute(
+                """UPDATE crawl_task_generation SET
+                    status='drafting',
+                    heartbeat_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+                WHERE task_id=? AND status IN ('claimed','drafting')""",
+                (task_id,),
             )
     finally:
         conn.close()

@@ -38,9 +38,11 @@ type Task = {
   created_by?: string;
   created_at: string;
   status: string;
+  generation_status: 'pending' | 'claimed' | 'drafting' | 'sandbox_test' | 'pr_open' | 'merged' | 'failed';
   raw_count: number;
   url_count: number;
   fetch_count: number;
+  adapter_ready: boolean;
 };
 
 type UrlRecord = {
@@ -181,6 +183,9 @@ function TasksPage() {
 
   const totals = useMemo(() => ({
     tasks: tasks.length,
+    adapterReady: tasks.filter((item) => item.adapter_ready).length,
+    codegenMerged: tasks.filter((item) => item.generation_status === 'merged').length,
+    codegenFailed: tasks.filter((item) => item.generation_status === 'failed').length,
     urls: tasks.reduce((sum, item) => sum + (item.url_count || 0), 0),
     raw: tasks.reduce((sum, item) => sum + (item.raw_count || 0), 0),
     fetches: tasks.reduce((sum, item) => sum + (item.fetch_count || 0), 0),
@@ -194,8 +199,9 @@ function TasksPage() {
     >
       <div className="summary-bar">
         <div><span>任务数</span><strong>{totals.tasks}</strong></div>
+        <div><span>Adapter 已开发</span><strong>{totals.adapterReady} / {totals.tasks}</strong></div>
+        <div><span>Codegen 已 merged</span><strong>{totals.codegenMerged}</strong></div>
         <div><span>URL records</span><strong>{totals.urls}</strong></div>
-        <div><span>Fetch records</span><strong>{totals.fetches}</strong></div>
         <div><span>Raw items</span><strong>{totals.raw}</strong></div>
       </div>
       <ProTable<Task>
@@ -255,9 +261,32 @@ function TasksPage() {
             ),
           },
           {
+            title: 'Adapter',
+            dataIndex: 'adapter_ready',
+            width: 100,
+            render: (_, row) => row.adapter_ready
+              ? <Tag color="green">已开发</Tag>
+              : <Tag>待开发</Tag>,
+          },
+          {
+            title: 'Codegen',
+            dataIndex: 'generation_status',
+            width: 116,
+            render: (_, row) => {
+              const color = row.generation_status === 'merged'
+                ? 'green'
+                : row.generation_status === 'failed'
+                  ? 'red'
+                  : row.generation_status === 'pending'
+                    ? 'default'
+                    : 'gold';
+              return <Tag color={color}>{row.generation_status}</Tag>;
+            },
+          },
+          {
             title: 'Status',
             dataIndex: 'status',
-            width: 124,
+            width: 116,
             render: (_, row) => <StatusTag value={row.status} />,
           },
           {
@@ -274,12 +303,27 @@ function TasksPage() {
           {
             title: 'Created by',
             dataIndex: 'created_by',
-            width: 160,
+            width: 140,
             ellipsis: true,
+          },
+          {
+            title: '操作',
+            width: 96,
+            fixed: 'right',
+            render: (_, row) => (
+              <Button
+                type="link"
+                size="small"
+                icon={<ArrowRightOutlined />}
+                onClick={() => navigate(`/tasks/${row.task_id}`)}
+              >
+                详情
+              </Button>
+            ),
           },
         ]}
         tableLayout="fixed"
-        scroll={{ x: 1020 }}
+        scroll={{ x: 1140 }}
       />
     </PageContainer>
   );

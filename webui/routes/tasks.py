@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from infra import adapter_registry
 from webui.auth.backend import User
 from webui.auth.deps import require_role
 
@@ -106,6 +107,14 @@ def api_tasks(
     items = request.app.state.task_store.list_tasks(
         status=status, business_context=business_context
     )
+    # adapter_ready 来自 adapter_registry（filesystem 上的 adapter 是否注册成功）。
+    # 任务表里的 status 字段表示"执行/爬取"状态，不直接代表 adapter 是否开发完。
+    adapter_registry.discover()
+    known_hosts = {(e.business_context, e.host) for e in adapter_registry.list_all()}
+    for item in items:
+        item["adapter_ready"] = (
+            (item.get("business_context"), item.get("host")) in known_hosts
+        )
     return {"items": items, "user": {"email": user.email, "role": user.role}}
 
 
