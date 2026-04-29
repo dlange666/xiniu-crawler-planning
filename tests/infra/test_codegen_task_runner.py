@@ -13,8 +13,10 @@ from scripts.run_codegen_for_adapter import (
     adapter_test_artifact,
     apply_db_task_to_args,
     claim_codegen_task,
+    codegen_commit_paths,
     mark_codegen_task_finished,
     normalize_task_json,
+    plan_artifact_path,
     record_wrapper_eval,
     seed_artifact,
     slug,
@@ -302,6 +304,42 @@ def test_write_feedback_prompt_includes_failed_gate_evidence(tmp_path: Path) -> 
     assert "Failed gates: pytest_new, audit" in text
     assert "SourceMetadata(raw={...})" in text
     assert "short body samples" in text
+
+
+def test_codegen_commit_paths_green_includes_delivery_artifacts(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
+    eval_path = tmp_path / f"docs/eval-test/codegen-example-{date.today():%Y%m%d}.md"
+    for path in (
+        plan_artifact_path(tmp_path, args),
+        tmp_path / f"docs/task/active/task-codegen-example-{date.today()}.json",
+        eval_path,
+        tmp_path / "domains/gov_policy/example/example_adapter.py",
+        tmp_path / "tests/gov_policy/test_example_adapter.py",
+        tmp_path / ".codegen-prompt.md",
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x", encoding="utf-8")
+
+    paths = codegen_commit_paths(tmp_path, args, eval_path=eval_path, overall=True)
+    relative = {str(path.relative_to(tmp_path)) for path in paths}
+
+    assert "docs/eval-test/codegen-example-" + f"{date.today():%Y%m%d}.md" in relative
+    assert "domains/gov_policy/example" in relative
+    assert "tests/gov_policy/test_example_adapter.py" in relative
+    assert ".codegen-prompt.md" not in relative
+
+
+def test_codegen_commit_paths_red_only_includes_eval(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
+    eval_path = tmp_path / f"docs/eval-test/codegen-example-{date.today():%Y%m%d}.md"
+    adapter_path = tmp_path / "domains/gov_policy/example/example_adapter.py"
+    for path in (eval_path, adapter_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x", encoding="utf-8")
+
+    paths = codegen_commit_paths(tmp_path, args, eval_path=eval_path, overall=False)
+
+    assert paths == [eval_path]
 
 
 def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:

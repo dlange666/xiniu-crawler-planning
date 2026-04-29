@@ -18,7 +18,8 @@ sonnet / 其它。
         --model opencode/minimax-m2.5-free
 
 退出码：0=audit pass，1=任意 gate fail。
-失败时 worktree 不会被删，方便人工查证；成功后由人决定合回主分支。
+green 时自动提交并推送 codegen 分支；red 时只提交并推送 eval 诊断报告。
+失败时 worktree 不会被删，方便人工查证。
 """
 
 from __future__ import annotations
@@ -607,6 +608,13 @@ def eval_artifact_path(worktree: Path, args: argparse.Namespace) -> Path:
     return worktree / f"docs/eval-test/codegen-{slug(args.host)}-{date.today():%Y%m%d}.md"
 
 
+def plan_artifact_path(worktree: Path, args: argparse.Namespace) -> Path:
+    return (
+        worktree
+        / f"docs/exec-plan/active/plan-{date.today():%Y%m%d}-codegen-{slug(args.host)}.md"
+    )
+
+
 def _extract_json_objects(text: str) -> list[str]:
     """Return balanced JSON-looking objects from text, respecting strings."""
     objects: list[str] = []
@@ -1141,6 +1149,83 @@ def record_wrapper_eval(
     return eval_path
 
 
+def codegen_commit_paths(
+    worktree: Path,
+    args: argparse.Namespace,
+    *,
+    eval_path: Path | None,
+    overall: bool,
+) -> list[Path]:
+    """Return the intentionally staged paths for green/red codegen output."""
+    if overall:
+        paths = [
+            plan_artifact_path(worktree, args),
+            task_artifact_path(worktree, args),
+            eval_path,
+            source_dir(worktree, args),
+            adapter_test_artifact(worktree, args),
+        ]
+    else:
+        # Red branches carry diagnostic evidence only. Avoid committing partial
+        # adapters/tests/golden files generated before gates failed.
+        paths = [eval_path]
+    return [path for path in paths if path is not None and path.exists()]
+
+
+def _git_output(cmd: list[str], *, cwd: Path) -> CommandResult:
+    proc = subprocess.run(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    if proc.stdout:
+        print(proc.stdout, end="" if proc.stdout.endswith("\n") else "\n")
+    return CommandResult(proc.returncode == 0, proc.stdout)
+
+
+def commit_and_push_codegen_result(
+    *,
+    worktree: Path,
+    args: argparse.Namespace,
+    branch: str,
+    eval_path: Path | None,
+    overall: bool,
+) -> bool:
+    paths = codegen_commit_paths(worktree, args, eval_path=eval_path, overall=overall)
+    if not paths:
+        print("[publish] no paths to commit")
+        return False
+
+    relative_paths = [str(path.relative_to(worktree)) for path in paths]
+    print("[publish] staging paths:")
+    for path in relative_paths:
+        print(f"  - {path}")
+    add_result = _git_output(["git", "add", "--", *relative_paths], cwd=worktree)
+    if not add_result.ok:
+        return False
+
+    diff_result = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=worktree,
+    )
+    if diff_result.returncode == 0:
+        print("[publish] no staged changes; skip commit")
+        return False
+
+    host_slug = slug(args.host)
+    if overall:
+        message = f"feature({host_slug}): add codegen adapter"
+    else:
+        message = f"docs({host_slug}): record codegen red eval"
+    commit_result = _git_output(["git", "commit", "-m", message], cwd=worktree)
+    if not commit_result.ok:
+        return False
+    push_result = _git_output(["git", "push", "-u", "origin", branch], cwd=worktree)
+    return push_result.ok
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--host", help="例：www.most.gov.cn；--from-task-db 模式下自动填充")
@@ -1174,6 +1259,12 @@ def main() -> int:
         type=int,
         default=3,
         help="wrapper gate red 后自动把失败证据回喂 agent 的最大次数",
+    )
+    ap.add_argument(
+        "--auto-commit",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="green 时自动提交并推送 codegen 产物；red 时只提交并推送 eval 诊断报告",
     )
     args = ap.parse_args()
 
@@ -1231,6 +1322,7 @@ def main() -> int:
     opencode_rc: int | None = None
     gate_error: str | None = None
     eval_path: Path | None = None
+    publish_ok: bool | None = None
     try:
         if not args.skip_codegen:
             setup_worktree(worktree, branch, args.force)
@@ -1292,12 +1384,22 @@ def main() -> int:
             gate_details=gate_details,
         )
         print(f"[eval] wrapper evidence: {eval_path}")
+        if args.auto_commit:
+            print("\n=== 自动提交 ===")
+            publish_ok = commit_and_push_codegen_result(
+                worktree=worktree,
+                args=args,
+                branch=branch,
+                eval_path=eval_path,
+                overall=overall,
+            )
+            print(f"[publish] {'PASS' if publish_ok else 'FAIL'}")
     finally:
         if claimed_task is not None:
             mark_codegen_task_finished(
                 args.task_db,
                 task_id=claimed_task.task_id,
-                success=overall,
+                success=overall and (publish_ok is not False),
                 branch=branch,
                 worker_id=args.worker_id,
                 eval_path=eval_path,
@@ -1309,24 +1411,34 @@ def main() -> int:
     print("\n下一步：")
     if overall:
         print(f"  1. 人工 review worktree: {worktree}")
-        print("  2. 没问题就提交、推送并开 draft PR：")
-        print(f"     git -C {worktree} status --short")
-        print(f"     git -C {worktree} add <changed files>")
-        print(f"     git -C {worktree} commit -m \"feature({host_slug}): add codegen adapter\"")
-        print(f"     git -C {worktree} push -u origin {branch}")
+        if args.auto_commit:
+            print(f"  2. 分支已自动提交并推送：{branch}")
+            print("  3. review 后开 draft PR：")
+        else:
+            print("  2. 没问题就提交、推送并开 draft PR：")
+            print(f"     git -C {worktree} status --short")
+            print(f"     git -C {worktree} add <changed files>")
+            print(
+                f"     git -C {worktree} commit -m "
+                f"\"feature({host_slug}): add codegen adapter\""
+            )
+            print(f"     git -C {worktree} push -u origin {branch}")
         print(
             f"     gh pr create --draft --base main --head {branch} "
             f"--title \"feature({host_slug}): add codegen adapter\""
         )
-        print("  3. PR review green 后再 merge；notify-message 暂用 eval 里的草稿。")
+        print("  4. PR review green 后再 merge；notify-message 暂用 eval 里的草稿。")
     else:
-        print("  1. 看失败的 gate（上面 FAIL 行）")
+        if args.auto_commit:
+            print(f"  1. red eval 已自动提交并推送到分支：{branch}")
+        else:
+            print("  1. 看失败的 gate（上面 FAIL 行）")
         print(f"  2. 看 codegen 日志：{log_file}")
-        print("  3. 看 worktree 里 agent 写的 eval：")
+        print("  3. 看 worktree 里的 eval：")
         print(f"     {worktree}/docs/eval-test/codegen-{host_slug}-*.md")
         print("  4. 修补 / 换 model / 换站点重跑")
 
-    return 0 if overall else 1
+    return 0 if overall and publish_ok is not False else 1
 
 
 if __name__ == "__main__":

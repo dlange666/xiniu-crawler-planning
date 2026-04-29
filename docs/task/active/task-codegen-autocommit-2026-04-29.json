@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "codegen-autocommit: wrapper gates 后自动提交并推送 codegen 分支。",
+  "pr_name": "codegen-autocommit",
+  "branch": "agent/infra-20260429-codegen-autocommit",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-1001",
+      "title": "[codegen/wrapper] green 自动提交并推送交付分支",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-autocommit",
+      "spec_ref": "codegen-output-contract.md §3.1",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T18:40:00+08:00",
+      "notes": "新增 --auto-commit 默认行为：green stage plan/task/eval/source/test，commit feature(<slug>) 并 push 分支。"
+    },
+    {
+      "id": "T-20260429-1002",
+      "title": "[codegen/wrapper] red 只提交 eval 诊断",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-autocommit",
+      "spec_ref": "codegen-output-contract.md §3.1",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T18:40:00+08:00",
+      "notes": "red 提交路径只包含 eval report，不提交 adapter/test/golden 等半成品。"
+    },
+    {
+      "id": "T-20260429-1003",
+      "title": "[docs/spec] 同步 pipeline 与 spec",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-autocommit",
+      "spec_ref": "codegen-output-contract.md §6",
+      "dependency": [],
+      "assignee": "planner",
+      "last_updated": "2026-04-29T18:40:00+08:00",
+      "notes": "docs/codegen-pipeline.md 记录提交边界；codegen-output-contract.md bump 到 rev 15。"
+    },
+    {
+      "id": "T-20260429-1004",
+      "title": "[eval] 验证 autocommit 行为",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-autocommit",
+      "spec_ref": "docs/eval-test/template.md",
+      "dependency": [
+        "T-20260429-1001",
+        "T-20260429-1002",
+        "T-20260429-1003"
+      ],
+      "assignee": "evaluator",
+      "last_updated": "2026-04-29T18:44:00+08:00",
+      "notes": "eval 已写入 docs/eval-test/codegen-autocommit-20260429.md；全量 pytest 145 passed；Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/22。"
+    }
+  ]
+}
