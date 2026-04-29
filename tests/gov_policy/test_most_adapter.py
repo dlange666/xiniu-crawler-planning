@@ -7,14 +7,14 @@ from pathlib import Path
 
 import pytest
 
-from domains.gov_policy.adapters import most
+from domains.gov_policy.most import most_adapter as most
 from infra import adapter_registry
 from infra.crawl import SeedSpec
 
-GOLDEN_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/golden/most"
-LIST_HTML = GOLDEN_DIR / "list_page.html"
-LIST_EXPECT = GOLDEN_DIR / "list_page.golden.json"
-DETAIL_CASES = sorted(GOLDEN_DIR.glob("detail_*.golden.json"))
+GOLDEN_DIR = Path(__file__).parent.parent.parent / "domains/gov_policy/most"
+LIST_HTML = GOLDEN_DIR / "most_golden_list_page.html"
+LIST_EXPECT = GOLDEN_DIR / "most_golden_list_page.golden.json"
+DETAIL_CASES = sorted(GOLDEN_DIR.glob("most_golden_detail_*.golden.json"))
 
 
 def _load_json(path: Path) -> dict:
@@ -45,6 +45,7 @@ def test_resolve_via_registry() -> None:
     adapter_registry.discover()
     entry = adapter_registry.get("gov_policy", "www.most.gov.cn")
     assert entry.module is most
+    assert entry.module_path == "domains.gov_policy.most.most_adapter"
     assert entry.render_mode == "direct"
 
 

@@ -1,6 +1,6 @@
 # Infra 韧性与增量抓取
 
-> **版本**：rev 2 · **最近修订**：2026-04-28 · **状态**：active
+> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：本 spec 是已通过的设计契约。MVP plan 暂不实现（TD-010 / 011 / 012），但 spec 永远是后续编码的权威。
 
 > 适用：`infra/http/`、`infra/checkpoint/`、`infra/frontier/`、`infra/version_guard/`
@@ -114,7 +114,7 @@ STALE_RUNNING_THRESHOLD_MINUTES         = 30
 
 ### 3.1 adapter schema_version 显式声明
 
-每个 `domains/<context>/adapters/<host>.py` 顶部声明：
+每个 `domains/<context>/<source>/<source>_adapter.py` 顶部声明：
 
 ```python
 ADAPTER_META = {
@@ -134,7 +134,7 @@ ADAPTER_META = {
 
 | 巡检 | 触发 | 动作 |
 |---|---|---|
-| **黄金 fixture 回放** | cron 每日 03:00 | 用本 host 的 `domains/<context>/golden/<host>/*.html` 跑解析；输出与期望 JSON 不等 → webhook + 自动开 fix-task（`task_type=update`） |
+| **黄金 fixture 回放** | cron 每日 03:00 | 用本 source 的 `domains/<context>/<source>/<source>_golden_*.html` 跑解析；输出与期望 JSON 不等 → webhook + 自动开 fix-task（`task_type=update`） |
 | **解析失败率突增** | cron 每 5min | 单 host 滚动 1h 解析失败率 > 历史 P95 + 20pp → webhook |
 | **关键字段缺失率突增** | cron 每 1h | 标题/发文字号/发布日期任一缺失率 > 历史 P95 + 10pp → webhook |
 | **日活页面数突降** | cron 每日 04:00 | 日新增页面数 < 历史 P5 → webhook（可能列表页改版或反爬升级） |
@@ -192,9 +192,9 @@ adapter_disable_threshold      = 5             # 与 fetch-policy 一致
 ## 6. 业务域接口
 
 业务域只能：
-- 在 `seeds/<host>.yaml` 配 `refresh_strategy`、`detail_refresh_interval_days`
+- 在 `domains/<context>/<source>/<source>_seed.yaml` 配 `refresh_strategy`、`detail_refresh_interval_days`
 - 在 adapter 顶部声明 `ADAPTER_META.schema_version`
-- 在 `golden/<host>/` 维护快照
+- 在 `domains/<context>/<source>/<source>_golden_*` 维护快照
 
 业务域**不得**：
 - 跳过 checkpoint（任何长任务必须 checkpoint）
@@ -219,5 +219,6 @@ adapter_disable_threshold      = 5             # 与 fetch-policy 一致
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 3 | 2026-04-29 | 版本巡检、seed 配置和 golden fixture 路径同步 source 聚合目录命名 | `codegen-output-contract.md` rev 9 |
 | rev 2 | 2026-04-28 | 新增 §2.5 心跳与卡死恢复（5min 心跳；GENERATING 60min / RUNNING 30min stale 阈值；自动复位规则）；§ 列表加第 4 项 | 借鉴上一版 implementation-plan |
 | rev 1 | 2026-04-28 | 初稿 | — |

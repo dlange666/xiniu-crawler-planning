@@ -20,7 +20,7 @@
 | Candidate | 当前实现 |
 | 数据切片 | NDRC 发展改革委令列表页 + 前 3 条详情 |
 | 评估口径 | 是否落库；title/正文/元数据是否正确抽取 |
-| 复现命令 | `uv run python scripts/run_crawl_task.py domains/gov_policy/seeds/ndrc.yaml --task-id 1001` |
+| 复现命令 | `uv run python scripts/run_crawl_task.py domains/gov_policy/ndrc/ndrc_seed.yaml --task-id 1001` |
 | 临时 DB | `runtime/db/dev.db`（开发 profile） |
 
 ## 3. 度量结果
@@ -72,7 +72,7 @@ prefix 规范 `raw/<yyyy>/<mm>/<dd>/task-N/<hash>.html` 符合 `infra-observabil
 | `tests/infra/test_http.py` | 6 | ✅ |
 | `tests/infra/test_robots.py` | 6 | ✅ |
 | `tests/infra/test_frontier.py` | 5 | ✅ |
-| `tests/gov_policy/test_adapter_ndrc.py` | 6 | ✅ |
+| `tests/gov_policy/test_ndrc_adapter.py` | 6 | ✅ |
 | `tests/gov_policy/test_dedup.py` | 5 | ✅ |
 | **总计** | **36** | **36/36** |
 

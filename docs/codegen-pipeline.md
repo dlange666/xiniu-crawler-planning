@@ -24,7 +24,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 |---|---|---|
 | git-worktree | wrapper / 调用方 | 在独立 worktree + 合规分支运行 agent |
 | plan | agent | 写本次 codegen plan，明确原子任务和验收门 |
-| task | agent | 写 task 状态文件，推进 pending -> in_progress -> verifying -> completed/failed |
+| task | wrapper + agent | wrapper 预生成标准 JSON 骨架；agent 只更新字段值，推进 pending -> in_progress -> verifying -> completed/failed |
 | code | agent | 只写允许范围内的 adapter / seed / test / golden |
 | gates | wrapper + agent | agent 可自跑；wrapper 仍会重复跑确定性 gates |
 | eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准 |
@@ -43,6 +43,8 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
 - 如果任一 gate 或 audit 失败，eval 必须是 `red` 或 `partial`，禁止自判 green。
+- Task 文件必须是标准 JSON：禁止 markdown fence、注释、尾逗号、JSON 外解释文本；
+  每次编辑后必须执行 `uv run python -m json.tool <task-json>`。
 - wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
   创建或追加 `Wrapper Gate Result`；即使 opencode 异常退出或漏写 eval，
   red 结果也必须留下 eval-test 证据。
@@ -56,19 +58,23 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 | Plan | `docs/exec-plan/active/plan-YYYYMMDD-codegen-<host>.md` |
 | Task | `docs/task/active/task-codegen-<host>-YYYY-MM-DD.json` |
 | Eval | `docs/eval-test/codegen-<host>-YYYYMMDD.md` |
-| Adapter | `domains/<business_context>/adapters/<host_slug>.py` |
-| Seed | `domains/<business_context>/seeds/<host_slug>.yaml` |
-| Golden HTML | `domains/<business_context>/golden/<host_slug>/*.html` |
-| Golden JSON | `domains/<business_context>/golden/<host_slug>/*.golden.json` |
-| Tests | `tests/<business_context>/test_adapter_<host_slug>.py` |
+| Adapter | `domains/<business_context>/<host_slug>/<host_slug>_adapter.py` |
+| Seed | `domains/<business_context>/<host_slug>/<host_slug>_seed.yaml` |
+| Golden HTML | `domains/<business_context>/<host_slug>/<host_slug>_golden_*.html` |
+| Golden JSON | `domains/<business_context>/<host_slug>/<host_slug>_golden_*.golden.json` |
+| Tests | `tests/<business_context>/test_<host_slug>_adapter.py` |
 
 如确需触达其它路径，必须在 eval §5 写明原因并停下等待人审，不得自行扩大范围。
+
+`host_slug` 必须承载源站主体职责，不得使用 `www`、`wap`、`m`、`mobile`
+等通用渠道前缀作为目录或文件名。示例：`www.most.gov.cn -> most`、
+`wap.miit.gov.cn -> miit`、`search.sh.gov.cn -> sh_search`。
 
 ## 3. Adapter 契约
 
 完整规则见 `docs/prod-spec/codegen-output-contract.md`。最小要求：
 
-- 参考 `domains/gov_policy/adapters/ndrc.py` 的结构。
+- 参考 `domains/gov_policy/ndrc/ndrc_adapter.py` 的结构。
 - `ADAPTER_META` 必须通过 `infra/adapter_registry/meta.py` 校验。
 - `render_mode` 默认写 `direct`；发现 JS shell / 无限滚动 / challenge 时停下写 red，不升级到 headless。
 - 探查必须使用 `scripts/probe_source.py --mode auto` 的 verdict。发现稳定、
@@ -118,16 +124,23 @@ git status --short --branch
 
 ### 4.3 task
 
-再写：
+wrapper 已预先写入：
 
 `docs/task/active/task-codegen-<host>-YYYY-MM-DD.json`
 
 要求：
 
-- 和 plan 中任务 ID 一致
+- 保留 wrapper 生成的 `schema_version`、`file_kind=pr-task-file`、`status_enum`、
+  `branch`、`date` 等结构字段
+- 和 plan 中任务 ID 一致；如新增任务记录，ID 必须是完整 `T-YYYYMMDD-NNN`
 - 当前执行中的任务状态推进到 `in_progress`
 - gates 跑完后改为 `verifying`
 - PR 创建后才能标 `completed`；若 wrapper 尚未创建 PR，最多标 `verifying`
+- 文件必须能通过：
+
+```bash
+uv run python -m json.tool docs/task/active/task-codegen-<host>-YYYY-MM-DD.json
+```
 
 ### 4.4 code
 
@@ -162,17 +175,17 @@ uv run python scripts/probe_source.py \
 ```bash
 uv run pytest tests/ -q
 
-uv run pytest tests/<business_context>/test_adapter_<host_slug>.py -v
+uv run pytest tests/<business_context>/test_<host_slug>_adapter.py -v
 
 uv run python -c "from infra import adapter_registry; adapter_registry.discover(); print(adapter_registry.get('<business_context>', '<host>'))"
 
 uv run python scripts/run_crawl_task.py \
-  domains/<business_context>/seeds/<host_slug>.yaml \
+  domains/<business_context>/<host_slug>/<host_slug>_seed.yaml \
   --max-pages 30 --max-depth 1 --scope-mode <scope_mode> --task-id <smoke_task_id>
 
 uv run python scripts/audit_crawl_quality.py \
   --task-id <smoke_task_id> \
-  --thresholds title_rate=0.95,body_500_rate=0.70,metadata_rate=0.30
+  --thresholds title_rate=0.95,body_100_rate=0.95,metadata_rate=0.30
 ```
 
 green 条件：
@@ -182,6 +195,7 @@ green 条件：
 | pytest | 既有 + 新增全绿 |
 | registry | 能 resolve 当前 host |
 | workflow docs | Plan / Task / Eval 三件套存在 |
+| task JSON | Task 文件是标准 JSON 且满足 `pr-task-file` 必备字段 |
 | golden | HTML 与 `.golden.json` 各 >= 5 |
 | live smoke | `raw_records_written >= 1` 且 `errors == 0` |
 | audit | 退出码 0 |

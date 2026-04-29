@@ -27,10 +27,10 @@ def _write_adapter(
     domains_root: Path, *, ctx: str, host_stem: str,
     meta: str = "", body: str = "", with_hooks: bool = True,
 ) -> None:
-    """在 tmp domains/<ctx>/adapters/<host_stem>.py 写一个最小 adapter。"""
-    adir = domains_root / ctx / "adapters"
-    adir.mkdir(parents=True, exist_ok=True)
-    (adir / "__init__.py").touch()
+    """在 tmp domains/<ctx>/<source>/<source>_adapter.py 写一个最小 adapter。"""
+    source_dir = domains_root / ctx / host_stem
+    source_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "__init__.py").touch()
     (domains_root / ctx / "__init__.py").touch()
 
     default_meta = f"""
@@ -49,9 +49,32 @@ def _write_adapter(
         def parse_detail(html, url):
             return None
     """ if with_hooks else ""
-    (adir / f"{host_stem}.py").write_text(
+    (source_dir / f"{host_stem}_adapter.py").write_text(
         textwrap.dedent(meta or default_meta) + textwrap.dedent(hooks) + body
     )
+
+
+def _write_legacy_adapter(domains_root: Path, *, ctx: str, host_stem: str) -> None:
+    """在旧路径 domains/<ctx>/adapters/<host_stem>.py 写一个最小 adapter。"""
+    adir = domains_root / ctx / "adapters"
+    adir.mkdir(parents=True, exist_ok=True)
+    (adir / "__init__.py").touch()
+    (domains_root / ctx / "__init__.py").touch()
+    default_meta = f"""
+        ADAPTER_META = {{
+            "host": "{host_stem}.example.com",
+            "schema_version": 1,
+            "data_kind": "policy",
+            "list_url_pattern": r"^https?://{host_stem}\\.example\\.com/list/.*",
+            "detail_url_pattern": r"^https?://{host_stem}\\.example\\.com/detail/\\d+",
+            "last_verified_at": "2026-04-28",
+        }}
+        def parse_list(html, url):
+            return None
+        def parse_detail(html, url):
+            return None
+    """
+    (adir / f"{host_stem}.py").write_text(textwrap.dedent(default_meta))
 
 
 @pytest.fixture
@@ -86,6 +109,16 @@ def test_discover_picks_up_adapter(fake_domains: Path) -> None:
     assert e.host == "aaa.example.com"
     assert e.schema_version == 1
     assert e.data_kind == "policy"
+    assert e.module_path == "domains.gov_policy.aaa.aaa_adapter"
+
+
+def test_discover_still_supports_legacy_adapters_during_migration(fake_domains: Path) -> None:
+    _write_legacy_adapter(fake_domains, ctx="gov_policy", host_stem="legacy")
+    n = adapter_registry.discover(domains_root=fake_domains)
+
+    assert n == 1
+    e = adapter_registry.get("gov_policy", "legacy.example.com")
+    assert e.module_path == "domains.gov_policy.adapters.legacy"
 
 
 def test_get_returns_entry_and_raises_on_unknown(fake_domains: Path) -> None:
@@ -111,7 +144,7 @@ def test_get_error_lists_candidates_in_same_context(fake_domains: Path) -> None:
 def test_discover_skips_underscore_files(fake_domains: Path) -> None:
     _write_adapter(fake_domains, ctx="gov_policy", host_stem="real")
     # _helper.py 也被写出来，但应被跳过
-    (fake_domains / "gov_policy" / "adapters" / "_helper.py").write_text(
+    (fake_domains / "gov_policy" / "real" / "_helper.py").write_text(
         "ADAPTER_META = {}  # 应被跳过\n"
     )
     adapter_registry.discover(domains_root=fake_domains)
@@ -120,7 +153,7 @@ def test_discover_skips_underscore_files(fake_domains: Path) -> None:
 
 def test_discover_skips_modules_without_meta(fake_domains: Path) -> None:
     _write_adapter(fake_domains, ctx="gov_policy", host_stem="ok")
-    no_meta_dir = fake_domains / "gov_policy" / "adapters"
+    no_meta_dir = fake_domains / "gov_policy" / "ok"
     (no_meta_dir / "shared.py").write_text("def helper(): return 1\n")
     adapter_registry.discover(domains_root=fake_domains)
     assert {e.host for e in adapter_registry.list_all()} == {"ok.example.com"}
@@ -263,5 +296,5 @@ def test_real_ndrc_adapter_picked_up_by_default_discovery() -> None:
     """跑真实仓库的 discover()：ndrc adapter 应该自动注册。"""
     adapter_registry.discover()
     e = adapter_registry.get("gov_policy", "www.ndrc.gov.cn")
-    assert e.module_path == "domains.gov_policy.adapters.ndrc"
+    assert e.module_path == "domains.gov_policy.ndrc.ndrc_adapter"
     assert e.data_kind == "policy"

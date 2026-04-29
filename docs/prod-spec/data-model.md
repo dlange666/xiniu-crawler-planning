@@ -1,6 +1,6 @@
 # 数据模型 · 表与索引权威标准
 
-> **版本**：rev 4 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 5 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：本 spec 是**所有表 DDL 的唯一权威来源**。各业务/能力 spec 描述设计动机与字段语义，本 spec 给最终落库的完整 SQL 与索引。
 
 > **写作约定**：
@@ -161,7 +161,7 @@ CREATE TABLE crawl_task_execution (
                               'canary_stage_0','canary_stage_1','canary_stage_2','canary_stage_3',
                               'completed','failed','disabled','rolled_back'
                             ) NOT NULL DEFAULT 'scheduled',
-    adapter_host           VARCHAR(255) NULL COMMENT '关联 domains/<ctx>/adapters/<host>.py',
+    adapter_host           VARCHAR(255) NULL COMMENT '关联 domains/<ctx>/<source>/<source>_adapter.py',
     adapter_schema_version INT UNSIGNED NULL,
     next_run_at            DATETIME(3) NULL,
     last_run_at            DATETIME(3) NULL,
@@ -605,6 +605,7 @@ CREATE TABLE webui_audit (
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 5 | 2026-04-29 | `crawl_task_execution.adapter_host` 注释同步 source 聚合目录命名，不改变字段类型与索引 | `codegen-output-contract.md` rev 11 |
 | rev 4 | 2026-04-29 | 将 `crawl_task.politeness_rps` 默认值从 0.500 调整为 1.000；无明确站点限速时按 1 rps，站点 seed / task 仍可向下覆盖 | `infra-fetch-policy.md` rev 3 |
 | rev 3 | 2026-04-29 | `crawl_task_execution` 新增结构化失败原因字段：`last_error_kind`、`last_error_detail`、`last_eval_path`、`needs_manual_review`；明确状态机不承载具体失败类型，MIIT wap search 这类入口问题用 `source_entry_unusable` 记录 | `docs/codegen-pipeline.md` §4.6 |
 | rev 2 | 2026-04-28 | 新增 `webui_audit`（§4.7）—— webui 写操作的细粒度审计日志；明确 `crawl_task.created_by` 由 webui 写入时填认证用户 email/sub，与 codegen 链路的 `crawl_task_audit_event` 不重叠 | `webui.md` rev 2 |

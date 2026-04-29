@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import argparse
 import sqlite3
+from datetime import date
 from pathlib import Path
 
 from infra.storage.sqlite_store import SqliteMetadataStore
 from scripts.run_codegen_for_adapter import (
+    adapter_artifact,
+    adapter_test_artifact,
     apply_db_task_to_args,
     claim_codegen_task,
     mark_codegen_task_finished,
+    normalize_task_json,
     record_wrapper_eval,
+    seed_artifact,
+    slug,
+    source_dir,
+    write_task_skeleton,
 )
 
 
@@ -47,6 +55,29 @@ def _insert_task(
             return task_id
     finally:
         conn.close()
+
+
+def test_slug_uses_source_name_not_generic_channel_prefix() -> None:
+    assert slug("www.most.gov.cn") == "most"
+    assert slug("wap.miit.gov.cn") == "miit"
+    assert slug("m.miit.gov.cn") == "miit"
+    assert slug("search.sh.gov.cn") == "sh_search"
+    assert slug("sousuo.www.gov.cn") == "gov_search"
+
+
+def test_codegen_artifact_paths_use_source_directory(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="wap.miit.gov.cn", business_context="gov_policy")
+
+    assert source_dir(tmp_path, args) == tmp_path / "domains/gov_policy/miit"
+    assert adapter_artifact(tmp_path, args) == (
+        tmp_path / "domains/gov_policy/miit/miit_adapter.py"
+    )
+    assert seed_artifact(tmp_path, args) == (
+        tmp_path / "domains/gov_policy/miit/miit_seed.yaml"
+    )
+    assert adapter_test_artifact(tmp_path, args) == (
+        tmp_path / "tests/gov_policy/test_miit_adapter.py"
+    )
 
 
 def test_claim_codegen_task_claims_next_scheduled_by_priority(tmp_path: Path) -> None:
@@ -131,6 +162,124 @@ def test_apply_db_task_to_args_sets_codegen_inputs(tmp_path: Path) -> None:
     assert args.business_context == "gov_policy"
     assert args.scope_mode == "same_origin"
     assert args.smoke_task_id == task_id
+
+
+def test_write_task_skeleton_creates_standard_pr_task_json(tmp_path: Path) -> None:
+    args = argparse.Namespace(host="www.example.gov.cn")
+
+    task_path = write_task_skeleton(
+        tmp_path,
+        args,
+        branch="agent/feature-20260429-codegen-example",
+    )
+
+    result = normalize_task_json(task_path)
+    text = task_path.read_text(encoding="utf-8")
+
+    assert result.ok is True
+    assert result.repaired is False
+    assert '"file_kind": "pr-task-file"' in text
+    assert f"T-{date.today():%Y%m%d}-701" in text
+
+
+def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:
+    task_path = tmp_path / "task.json"
+    task_path.write_text(
+        """Here is the task file:
+
+```json
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "example",
+  "pr_name": "codegen-example",
+  "branch": "agent/feature-20260429-codegen-example",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[codegen/example] build adapter",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-codegen-example",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T14:00:00+08:00",
+      "notes": ""
+    }
+  ]
+}
+```
+""",
+        encoding="utf-8",
+    )
+
+    result = normalize_task_json(task_path)
+    repaired = task_path.read_text(encoding="utf-8")
+
+    assert result.ok is True
+    assert result.repaired is True
+    assert repaired.startswith("{\n")
+    assert "```" not in repaired
+
+
+def test_normalize_task_json_skips_non_json_brace_before_task(tmp_path: Path) -> None:
+    task_path = tmp_path / "task.json"
+    task_path.write_text(
+        """The previous attempt had {not json}.
+
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "example",
+  "pr_name": "codegen-example",
+  "branch": "agent/feature-20260429-codegen-example",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[codegen/example] build adapter",
+      "status": "in_progress",
+      "plan_id": "plan-20260429-codegen-example",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T14:00:00+08:00",
+      "notes": ""
+    }
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = normalize_task_json(task_path)
+
+    assert result.ok is True
+    assert result.repaired is True
+
+
+def test_normalize_task_json_rejects_nonstandard_json(tmp_path: Path) -> None:
+    task_path = tmp_path / "task.json"
+    task_path.write_text(
+        """{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "example",
+  "pr_name": "codegen-example",
+  "branch": "agent/feature-20260429-codegen-example",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress"],
+  "tasks": [],
+}
+""",
+        encoding="utf-8",
+    )
+
+    result = normalize_task_json(task_path)
+
+    assert result.ok is False
+    assert result.error is not None
 
 
 def test_mark_codegen_task_finished_updates_status_and_counters(tmp_path: Path) -> None:
