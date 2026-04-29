@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "优化 codegen agent 非标准 JSON 输出问题：wrapper 预生成 task JSON 骨架并在 gates 中校验/规范化。",
+  "pr_name": "codegen-json-contract",
+  "branch": "agent/infra-20260429-codegen-json-contract",
+  "date": "2026-04-29",
+  "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[infra/codegen] Task JSON 标准输出与 wrapper 校验",
+      "status": "verifying",
+      "plan_id": "plan-20260429-codegen-json-contract",
+      "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4.3",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T15:25:00+08:00",
+      "notes": "实现与验证已完成；等待 draft PR 创建后关闭。"
+    }
+  ]
+}

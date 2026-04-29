@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import json
 import os
 import re
 import shutil
@@ -36,6 +37,7 @@ import time
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any, NamedTuple
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
@@ -58,6 +60,12 @@ class CodegenDbTask:
     max_pages_per_run: int | None
     politeness_rps: float
     scope_description: str | None
+
+
+class JsonValidationResult(NamedTuple):
+    ok: bool
+    repaired: bool
+    error: str | None = None
 
 
 def slug(host: str) -> str:
@@ -126,7 +134,10 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
         按 pipeline §4 工作流：
 
         1. 写 plan：`docs/exec-plan/active/plan-{today:%Y%m%d}-codegen-{host_slug}.md`
-        2. 写 task：`docs/task/active/task-codegen-{host_slug}-{today}.json`
+        2. 更新 task：wrapper 已预先生成合法 JSON 骨架
+           `docs/task/active/task-codegen-{host_slug}-{today}.json`。只允许编辑 JSON
+           字段值，不要输出 markdown fence、注释、尾逗号或任何 JSON 外文本；
+           每次编辑后必须执行 `uv run python -m json.tool <task-json>`。
         3. 实现：
            - `domains/{args.business_context}/adapters/{host_slug}.py`
            - `domains/{args.business_context}/seeds/{host_slug}.yaml`
@@ -160,6 +171,55 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
     f = worktree / ".codegen-prompt.md"
     f.write_text(prompt)
     return f
+
+
+def task_artifact_path(worktree: Path, args: argparse.Namespace) -> Path:
+    return worktree / f"docs/task/active/task-codegen-{slug(args.host)}-{date.today()}.json"
+
+
+def write_task_skeleton(worktree: Path, args: argparse.Namespace, branch: str) -> Path:
+    """Pre-create the task JSON as canonical JSON before handing control to agent.
+
+    The coding agent should update this file instead of inventing the structure
+    from scratch. That removes the most common failure mode: markdown or prose
+    wrapped around a JSON-looking object.
+    """
+    today = date.today()
+    host_slug = slug(args.host)
+    task_path = task_artifact_path(worktree, args)
+    task_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_id = f"plan-{today:%Y%m%d}-codegen-{host_slug}"
+    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    doc: dict[str, Any] = {
+        "schema_version": "1.0",
+        "file_kind": "pr-task-file",
+        "description": f"codegen-{host_slug}: 为 {args.host} 生成采集适配器。",
+        "pr_name": f"codegen-{host_slug}",
+        "branch": branch,
+        "date": today.isoformat(),
+        "status_enum": ["pending", "in_progress", "verifying", "completed", "failed"],
+        "tasks": [
+            {
+                "id": f"T-{today:%Y%m%d}-701",
+                "title": f"[codegen/{host_slug}] 生成并验收采集适配器",
+                "status": "in_progress",
+                "plan_id": plan_id,
+                "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4",
+                "dependency": [],
+                "assignee": "generator",
+                "last_updated": now,
+                "notes": (
+                    "wrapper 预生成 JSON 骨架；agent 更新时必须保持标准 JSON，"
+                    "wrapper gates 会校验并在常见包裹文本场景下自动规范化。"
+                ),
+            }
+        ],
+    }
+    task_path.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return task_path
 
 
 def setup_worktree(worktree: Path, branch: str, force: bool) -> None:
@@ -339,6 +399,135 @@ def eval_artifact_path(worktree: Path, args: argparse.Namespace) -> Path:
     return worktree / f"docs/eval-test/codegen-{slug(args.host)}-{date.today():%Y%m%d}.md"
 
 
+def _extract_json_objects(text: str) -> list[str]:
+    """Return balanced JSON-looking objects from text, respecting strings."""
+    objects: list[str] = []
+    starts = [match.start() for match in re.finditer(r"\{", text)]
+    for start in starts:
+        depth = 0
+        in_string = False
+        escaped = False
+        for idx, char in enumerate(text[start:], start=start):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    objects.append(text[start:idx + 1])
+                    break
+    return objects
+
+
+def _validate_pr_task_file(data: Any) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(data, dict):
+        return ["root must be a JSON object"]
+
+    required = {
+        "schema_version",
+        "file_kind",
+        "description",
+        "pr_name",
+        "branch",
+        "date",
+        "status_enum",
+        "tasks",
+    }
+    for key in sorted(required - set(data)):
+        errors.append(f"missing top-level key: {key}")
+
+    if data.get("file_kind") != "pr-task-file":
+        errors.append("file_kind must be pr-task-file")
+    if not isinstance(data.get("status_enum"), list):
+        errors.append("status_enum must be a list")
+    tasks = data.get("tasks")
+    if not isinstance(tasks, list) or not tasks:
+        errors.append("tasks must be a non-empty list")
+        return errors
+
+    task_required = {
+        "id",
+        "title",
+        "status",
+        "plan_id",
+        "dependency",
+        "assignee",
+        "last_updated",
+        "notes",
+    }
+    for index, task in enumerate(tasks):
+        if not isinstance(task, dict):
+            errors.append(f"tasks[{index}] must be an object")
+            continue
+        for key in sorted(task_required - set(task)):
+            errors.append(f"tasks[{index}] missing key: {key}")
+        task_id = task.get("id")
+        if not isinstance(task_id, str) or not re.fullmatch(r"T-\d{8}-\d{3}", task_id):
+            errors.append(f"tasks[{index}].id must match T-YYYYMMDD-NNN")
+        if task.get("status") not in data.get("status_enum", []):
+            errors.append(f"tasks[{index}].status is not in status_enum")
+        if not isinstance(task.get("dependency", []), list):
+            errors.append(f"tasks[{index}].dependency must be a list")
+    return errors
+
+
+def normalize_task_json(path: Path) -> JsonValidationResult:
+    """Validate task JSON and canonicalize common non-standard model output.
+
+    The repair is deliberately narrow: it only extracts a balanced JSON object
+    from wrappers such as markdown fences or explanatory prose. It does not
+    guess missing commas or comments, because that can silently alter meaning.
+    """
+    if not path.exists():
+        return JsonValidationResult(False, False, "task JSON missing")
+
+    raw = path.read_text(encoding="utf-8")
+    candidates = [(raw, False)]
+    for extracted in _extract_json_objects(raw):
+        if extracted == raw.strip():
+            continue
+        candidates.append((extracted, True))
+
+    last_error: str | None = None
+    for candidate, repaired in candidates:
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = f"JSONDecodeError: {exc.msg} at line {exc.lineno} column {exc.colno}"
+            continue
+        schema_errors = _validate_pr_task_file(data)
+        if schema_errors:
+            return JsonValidationResult(False, repaired, "; ".join(schema_errors))
+        path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return JsonValidationResult(True, repaired, None)
+
+    return JsonValidationResult(False, False, last_error or "no JSON object found")
+
+
+def codegen_task_json_valid(worktree: Path, args: argparse.Namespace) -> bool:
+    result = normalize_task_json(task_artifact_path(worktree, args))
+    if result.ok:
+        if result.repaired:
+            print("[gate] task JSON repaired to canonical JSON")
+        return True
+    print(f"[gate] task JSON invalid: {result.error}")
+    return False
+
+
 def golden_artifacts_exist(worktree: Path, args: argparse.Namespace) -> bool:
     golden_dir = (
         worktree / "domains" / args.business_context / "golden" / slug(args.host)
@@ -407,6 +596,7 @@ def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> d
          f"print(adapter_registry.get('{args.business_context}', '{args.host}'))"],
         cwd=worktree, env=gate_env)
     res["workflow_docs"] = workflow_artifacts_exist(worktree, args)
+    res["task_json"] = codegen_task_json_valid(worktree, args)
     res["golden"] = golden_artifacts_exist(worktree, args)
     if smoke_db.exists():
         smoke_db.unlink()
@@ -618,6 +808,8 @@ def main() -> int:
     try:
         if not args.skip_codegen:
             setup_worktree(worktree, branch, args.force)
+            task_path = write_task_skeleton(worktree, args, branch)
+            print(f"[codegen] wrote task JSON skeleton: {task_path}")
             write_per_task_prompt(worktree, args)
             opencode_rc = invoke_opencode(worktree, args.model, log_file)
             print(f"\n[codegen] opencode exit code: {opencode_rc}")

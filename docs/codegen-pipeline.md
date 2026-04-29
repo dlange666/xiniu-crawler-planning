@@ -24,7 +24,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 |---|---|---|
 | git-worktree | wrapper / 调用方 | 在独立 worktree + 合规分支运行 agent |
 | plan | agent | 写本次 codegen plan，明确原子任务和验收门 |
-| task | agent | 写 task 状态文件，推进 pending -> in_progress -> verifying -> completed/failed |
+| task | wrapper + agent | wrapper 预生成标准 JSON 骨架；agent 只更新字段值，推进 pending -> in_progress -> verifying -> completed/failed |
 | code | agent | 只写允许范围内的 adapter / seed / test / golden |
 | gates | wrapper + agent | agent 可自跑；wrapper 仍会重复跑确定性 gates |
 | eval | agent + wrapper | agent 写 green/red/partial 证据；wrapper 在 gates 后强制创建或追加最终 gate 记录，判定以 gates/audit 为准 |
@@ -41,6 +41,8 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR -> merge -> notify-m
 - 不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`，禁止写 `T-401` 这类简写。
 - 如果任一 gate 或 audit 失败，eval 必须是 `red` 或 `partial`，禁止自判 green。
+- Task 文件必须是标准 JSON：禁止 markdown fence、注释、尾逗号、JSON 外解释文本；
+  每次编辑后必须执行 `uv run python -m json.tool <task-json>`。
 - wrapper 会在 gates 后向 `docs/eval-test/codegen-<host>-YYYYMMDD.md`
   创建或追加 `Wrapper Gate Result`；即使 opencode 异常退出或漏写 eval，
   red 结果也必须留下 eval-test 证据。
@@ -112,16 +114,23 @@ git status --short --branch
 
 ### 4.3 task
 
-再写：
+wrapper 已预先写入：
 
 `docs/task/active/task-codegen-<host>-YYYY-MM-DD.json`
 
 要求：
 
-- 和 plan 中任务 ID 一致
+- 保留 wrapper 生成的 `schema_version`、`file_kind=pr-task-file`、`status_enum`、
+  `branch`、`date` 等结构字段
+- 和 plan 中任务 ID 一致；如新增任务记录，ID 必须是完整 `T-YYYYMMDD-NNN`
 - 当前执行中的任务状态推进到 `in_progress`
 - gates 跑完后改为 `verifying`
 - PR 创建后才能标 `completed`；若 wrapper 尚未创建 PR，最多标 `verifying`
+- 文件必须能通过：
+
+```bash
+uv run python -m json.tool docs/task/active/task-codegen-<host>-YYYY-MM-DD.json
+```
 
 ### 4.4 code
 
@@ -160,6 +169,7 @@ green 条件：
 | pytest | 既有 + 新增全绿 |
 | registry | 能 resolve 当前 host |
 | workflow docs | Plan / Task / Eval 三件套存在 |
+| task JSON | Task 文件是标准 JSON 且满足 `pr-task-file` 必备字段 |
 | golden | HTML 与 `.golden.json` 各 >= 5 |
 | live smoke | `raw_records_written >= 1` 且 `errors == 0` |
 | audit | 退出码 0 |
