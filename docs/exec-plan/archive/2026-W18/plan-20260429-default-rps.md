@@ -4,7 +4,7 @@
 
 - **Plan ID**：`plan-20260429-default-rps`
 - **关联规格**：`docs/prod-spec/infra-fetch-policy.md` §2, §8；`docs/prod-spec/data-model.md` §4.1.1
-- **状态**：`active`
+- **状态**：`completed`
 - **负责角色**：`Planner`
 
 ## 2. 目标
@@ -16,7 +16,7 @@
 
 | 任务 ID | 标题 | spec_ref | 实现细节 | 验证方式（Evaluator） | 状态 |
 |---|---|---|---|---|---|
-| T-20260429-601 | [infra/fetch] 默认 politeness_rps 调整为 1.0 | `infra-fetch-policy.md` §2, §8；`data-model.md` §4.1.1 | 更新 `HostTokenBucket`、seed/task 类型默认值、seed loader、CrawlEngine、SQLite DDL、WebUI 表单与文档默认值；站点 seed 仅更新注释 | 单测覆盖 token bucket 默认值、seed loader 默认值、SQLite 默认值；ruff、py_compile、全量 pytest | `verifying` |
+| T-20260429-601 | [infra/fetch] 默认 politeness_rps 调整为 1.0 | `infra-fetch-policy.md` §2, §8；`data-model.md` §4.1.1 | 更新 `HostTokenBucket`、seed/task 类型默认值、seed loader、CrawlEngine、SQLite DDL、WebUI 表单与文档默认值；站点 seed 仅更新注释 | 单测覆盖 token bucket 默认值、seed loader 默认值、SQLite 默认值；ruff、py_compile、全量 pytest | `completed` |
 
 ## 4. 边界护栏
 

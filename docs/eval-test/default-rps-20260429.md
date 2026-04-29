@@ -39,6 +39,10 @@ uv run pytest tests/ -q
 git diff --check
 ```
 
+## 3.1 关联 PR
+
+- Draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/12
+
 ## 4. 度量结果
 
 | Gate | 结果 |
@@ -70,7 +74,7 @@ git diff --check
 
 | 事项 | 落点 |
 |---|---|
-| 关闭哪些 task / plan | 验证通过并创建 PR 后关闭 `T-20260429-601` |
+| 关闭哪些 task / plan | `T-20260429-601` completed；`plan-20260429-default-rps` archived |
 
 ## 修订历史
 

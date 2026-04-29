@@ -10,13 +10,13 @@
     {
       "id": "T-20260429-601",
       "title": "[infra/fetch] 默认 politeness_rps 调整为 1.0",
-      "status": "verifying",
+      "status": "completed",
       "plan_id": "plan-20260429-default-rps",
       "spec_ref": "infra-fetch-policy.md §2, §8；data-model.md §4.1.1",
       "dependency": [],
       "assignee": "generator",
-      "last_updated": "2026-04-29T14:12:00+08:00",
-      "notes": "已调整代码、SQLite DDL、WebUI 默认值与相关 spec；等待验证与 PR 创建后关闭。"
+      "last_updated": "2026-04-29T14:35:00+08:00",
+      "notes": "已调整代码、SQLite DDL、WebUI 默认值与相关 spec；验证 green，draft PR: https://github.com/dlange666/xiniu-crawler-planning/pull/12。"
     }
   ]
 }
