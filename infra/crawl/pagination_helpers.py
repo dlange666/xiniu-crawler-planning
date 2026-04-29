@@ -5,6 +5,7 @@ adapter 可在 parse_list 中调用这些 helper 然后填 ParseListResult.next_
 
 覆盖：
 - parse_create_page_html(html): 解析中国政府站常用 createPageHTML(N, cur, prefix, suffix)
+  与 createPageHTML(container_id, N, cur, prefix, suffix, rows) 变体
 - detect_url_param_paginator(html, base_url): 识别 a[href] 中是否含 ?page=N 模式
 - detect_path_paginator(html, base_url): 识别 index_N.html / page/N/ 等路径模式
 
@@ -21,18 +22,32 @@ from urllib.parse import urljoin, urlparse
 
 
 def parse_create_page_html(html: str) -> tuple[int, str, str] | None:
-    """解析 createPageHTML(total, cur, prefix, suffix) JS 函数调用。
+    """解析 createPageHTML(...) JS 函数调用。
 
-    NDRC、工信部、财政部等多家中国政府站使用此模式。
+    NDRC、工信部、财政部等多家中国政府站使用 total-first 模式；
+    证监会等站点使用 container-id-first 模式。
     返回 (total_pages, prefix, suffix) 或 None。
     """
     pattern = re.compile(
-        r'createPageHTML\s*\(\s*(\d+)\s*,\s*\d+\s*,\s*'
-        r'"([^"]+)"\s*,\s*"([^"]+)"'
+        r"createPageHTML\s*\(\s*"
+        r"(?:"
+        r"(?P<total>\d+)\s*,\s*\d+\s*,\s*"
+        r"['\"](?P<prefix>[^'\"]+)['\"]\s*,\s*"
+        r"['\"](?P<suffix>[^'\"]+)['\"]"
+        r"|"
+        r"['\"][^'\"]+['\"]\s*,\s*"
+        r"(?P<total_with_id>\d+)\s*,\s*\d+\s*,\s*"
+        r"['\"](?P<prefix_with_id>[^'\"]+)['\"]\s*,\s*"
+        r"['\"](?P<suffix_with_id>[^'\"]+)['\"]"
+        r")",
     )
     m = pattern.search(html)
     if m:
-        return int(m.group(1)), m.group(2), m.group(3)
+        total = m.group("total") or m.group("total_with_id")
+        prefix = m.group("prefix") or m.group("prefix_with_id")
+        suffix = m.group("suffix") or m.group("suffix_with_id")
+        if total and prefix and suffix:
+            return int(total), prefix, suffix
     return None
 
 

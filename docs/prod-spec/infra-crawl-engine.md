@@ -1,6 +1,6 @@
 # Infra 通用爬虫引擎
 
-> **版本**：rev 3 · **最近修订**：2026-04-29 · **状态**：active
+> **版本**：rev 4 · **最近修订**：2026-04-29 · **状态**：active
 > **实施状态**：MVP 已实现核心（commit 1987ac8）；高级特性（host_score 外层 / aging / AI relevance）随阶段演进。
 
 > 适用：`infra/crawl/` 模块。本 spec 规定通用爬虫引擎的对外契约——
@@ -141,7 +141,7 @@ Step 2: while frontier 有 ready item：
 |---|---|---|---|
 | URL 参数翻页 | `?page=2` | adapter 调 `detect_url_param_paginator` 静态发现 | ✅ infra helper |
 | 路径翻页 | `index_2.html` / `/page/2/` | adapter 调 `detect_path_paginator` | ✅ infra helper |
-| createPageHTML JS 调用 | NDRC、工信部、财政部等 | adapter 调 `parse_create_page_html` + `expand_create_page_html_pages` | ✅ infra helper |
+| createPageHTML JS 调用 | NDRC/工信部 `createPageHTML(total, cur, prefix, suffix)`；证监会 `createPageHTML(container_id, total, cur, prefix, suffix, rows)` | adapter 调 `parse_create_page_html` + `expand_create_page_html_pages` | ✅ infra helper |
 | AJAX/JSON API | `GET /api/list?page=N` / `YAOWENLIEBIAO.json` | `infra/source_probe` 先发现并留 artifact；后续 runner/API source 统一抓取 | ✅ probe capability；runner 集成后续切片 |
 | Cursor / 游标 | `?after=eyJ...` | adapter 自行解析 cursor 字段 | ⚠️ 同上 |
 | 无限滚动 | IntersectionObserver → AJAX | render 模拟（M5+） | ❌ 暂未实现 |
@@ -150,7 +150,7 @@ Step 2: while frontier 有 ready item：
 ### 6.2 adapter 与 helper 的协作
 
 ```python
-# 推荐写法（NDRC 示例）
+# 推荐写法
 from infra.crawl.pagination_helpers import (
     parse_create_page_html, expand_create_page_html_pages,
 )
@@ -266,12 +266,14 @@ probe 仍使用共享 `HttpClient` 与 `RobotsChecker`；它不是绕过层。
 
 - 单元：见 `tests/infra/{test_strategies, test_scope, test_pagination_helpers, test_dedup}.py`（共 ~17 用例）
 - 黄金：`tests/gov_policy/test_ndrc_adapter.py::test_parse_list_emits_pagination`（验证 createPageHTML 解析）
+- 单元覆盖：`tests/infra/test_pagination_helpers.py` 覆盖 total-first 双/单引号与 container-id-first createPageHTML 变体
 - 端到端：`scripts/run_crawl_task.py` 配 `--max-depth=2 --max-pages=15+` 跑 NDRC，期望 9 list + 数条 detail + 解读 + 附件均到位
 
 ## 修订历史
 
 | 修订 | 日期 | 摘要 | 关联 |
 |---|---|---|---|
+| rev 4 | 2026-04-29 | 扩展 `parse_create_page_html`，支持政府站常见的单引号 total-first 与 container-id-first 变体（如 `createPageHTML('page_div',5,1,'fg','shtml',89)`）；避免 codegen 因 helper 未覆盖而只采首页 | `pagination_helpers.py`、`test_pagination_helpers.py`、`codegen-output-contract.md` rev 13 |
 | rev 3 | 2026-04-29 | 新增 `infra/source_probe` 与 `scripts/probe_source.py` 契约：codegen 先通过受控工具判断 static / JSON API / headless_required，并把 artifact 写入 `runtime/probe/`；AJAX/JSON 不再由 adapter hook 自行联网 | `codegen-output-contract.md` rev 6 |
 | rev 2 | 2026-04-28 | 补充 headless render pool 的 spec 归属；CrawlEngine v1 仍不实现渲染，只把 M5 能力边界指向 `infra-render-pool.md` | TD-008 / `infra-render-pool.md` |
 | rev 1 | 2026-04-28 | 初稿 —— CrawlEngine 契约 + BFS/DFS routing order + 4 scope mode + 递归发现 + 翻页 helper（cph/url_param/path）。落实 research §3-§4 与 commit 1987ac8 的引擎重构 | 替代 design-task-driven-codegen §6 的 worker 循环描述；外延 codegen-output-contract.md §2 |

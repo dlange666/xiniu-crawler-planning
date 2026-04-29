@@ -258,7 +258,17 @@ domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
         ## 你需要自己探的事
 
         - 翻页：实际 fetch 一次列表页，看是否有 `index_N.htm` / `?page=N`
-          / "下一页"按钮，按 pipeline §3 选 helper
+          / "下一页"按钮 / `createPageHTML` / `data-page` / 公开 JS page config，
+          按 pipeline §3 先选 `infra/crawl/pagination_helpers.py` helper
+        - 如果 infra helper 返回空，但 HTML/JS 中存在明确、稳定、可静态解析的
+          分页/API/字段信号，不能直接放弃或写 red。你必须在
+          `{host_slug}_adapter.py` 内实现 host-bounded fallback（纯函数、无联网、
+          不改 infra），并用 golden/test 覆盖；eval 记录 helper 未覆盖、fallback
+          规则，以及是否建议另开 infra 任务提升。**本 codegen 任务禁止修改
+          `infra/`；infra 能力由单独 infra 任务补。**
+        - 若存在分页信号，`tests/{args.business_context}/test_{host_slug}_adapter.py`
+          必须断言 `parse_list(...).next_pages` 至少包含 1 个预期分页 URL；golden
+          JSON 也要记录对应 `next_pages`
         - 详情 URL 模式：从列表 HTML 里抽 5+ 链接，归纳 detail_url_pattern 正则
         - 跨子域：如详情链接散布到 `*.{args.host.replace("www.", "")}` 的子站，
           seed 必须设 `scope_mode: same_etld_plus_one`，且 CLI 也要显式同步（已知陷阱）
