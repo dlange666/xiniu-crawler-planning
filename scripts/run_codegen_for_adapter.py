@@ -227,7 +227,7 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
 
         ## 必须交付
 
-        按 pipeline §4 工作流：
+        按 pipeline §4-§6 工作流：
 
         1. 写 plan：`docs/exec-plan/active/plan-{today:%Y%m%d}-codegen-{host_slug}.md`
         2. 更新 task：wrapper 已预先生成合法 JSON 骨架
@@ -241,7 +241,7 @@ def write_per_task_prompt(worktree: Path, args: argparse.Namespace) -> Path:
            - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.html`
            - `domains/{args.business_context}/{host_slug}/{host_slug}_golden_*.golden.json`
            - `tests/{args.business_context}/test_{host_slug}_adapter.py`
-        4. 跑 pipeline §4.5 的验收门，**包括 live smoke + audit 脚本**
+        4. 跑 pipeline §5 的验收门，**包括 live smoke + audit 脚本**
         5. 写 eval：`docs/eval-test/codegen-{host_slug}-{today:%Y%m%d}.md`，判定来自 audit 退出码
         6. eval 最后一节写 PR handoff 与 notify-message 草稿
 
@@ -885,7 +885,7 @@ def detail_url_pattern_gate(
 
 
 def run_gates(worktree: Path, args: argparse.Namespace, smoke_task_id: int) -> GateRunResult:
-    """跑 pipeline §4.5 全套验收门，返回确定性结果和诊断输出。"""
+    """跑 pipeline §5 全套验收门，返回确定性结果和诊断输出。"""
     res: dict[str, bool] = {}
     details: dict[str, str] = {}
     runtime = worktree / "runtime"
