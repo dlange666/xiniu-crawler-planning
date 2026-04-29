@@ -1,0 +1,13 @@
+{
+  "kind": "detail",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/flfg/202405/t20240531_191008.html",
+  "title_contains": "国家科学技术奖励条例",
+  "min_body_len": 5000,
+  "required_metadata": {
+    "索引号": "306-14-2024-274",
+    "发文机构": "国务院",
+    "发布日期": "2024年05月30日",
+    "发文字号": "国务院令第782号"
+  },
+  "expected_min_interpret_links": 0
+}

@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS crawl_task_execution (
     last_run_at            TEXT,
     last_run_id            TEXT,
     last_run_status        TEXT,
+    last_error_kind        TEXT,
+    last_error_detail      TEXT,
+    last_eval_path         TEXT,
+    needs_manual_review    INTEGER NOT NULL DEFAULT 0,
     last_full_crawl_at     TEXT,
     canary_stage_until     TEXT,
     run_count              INTEGER NOT NULL DEFAULT 0,
@@ -208,6 +212,24 @@ class SqliteMetadataStore:
     def init_schema(self) -> None:
         with self._conn:
             self._conn.executescript(SCHEMA_SQL)
+            self._ensure_columns(
+                "crawl_task_execution",
+                {
+                    "last_error_kind": "TEXT",
+                    "last_error_detail": "TEXT",
+                    "last_eval_path": "TEXT",
+                    "needs_manual_review": "INTEGER NOT NULL DEFAULT 0",
+                },
+            )
+
+    def _ensure_columns(self, table: str, columns: dict[str, str]) -> None:
+        """Add newly introduced nullable/defaulted columns to existing dev DBs."""
+        existing = {
+            row[1] for row in self._conn.execute(f"PRAGMA table_info({table})")
+        }
+        for name, ddl in columns.items():
+            if name not in existing:
+                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
     def execute(self, sql: str, params: tuple = ()) -> None:
         with self._conn:

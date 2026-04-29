@@ -35,6 +35,50 @@ def test_metadata_init_schema_idempotent(tmp_metadata: SqliteMetadataStore) -> N
         "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     table_names = {r[0] for r in rows}
     assert {"url_record", "fetch_record", "crawl_raw", "crawl_run_log"} <= table_names
+    columns = {
+        r[1] for r in tmp_metadata.fetch_all("PRAGMA table_info(crawl_task_execution)")
+    }
+    assert {
+        "last_error_kind",
+        "last_error_detail",
+        "last_eval_path",
+        "needs_manual_review",
+    } <= columns
+
+
+def test_metadata_init_schema_migrates_existing_execution_table(tmp_path: Path) -> None:
+    db = tmp_path / "legacy.db"
+    store = SqliteMetadataStore(db)
+    store.execute(
+        """CREATE TABLE crawl_task_execution (
+            task_id INTEGER PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'scheduled',
+            adapter_host TEXT,
+            adapter_schema_version INTEGER,
+            next_run_at TEXT,
+            last_run_at TEXT,
+            last_run_id TEXT,
+            last_run_status TEXT,
+            last_full_crawl_at TEXT,
+            canary_stage_until TEXT,
+            run_count INTEGER NOT NULL DEFAULT 0,
+            consecutive_failures INTEGER NOT NULL DEFAULT 0,
+            worker_id TEXT,
+            claim_at TEXT,
+            heartbeat_at TEXT
+        )"""
+    )
+
+    store.init_schema()
+
+    columns = {r[1] for r in store.fetch_all("PRAGMA table_info(crawl_task_execution)")}
+    assert {
+        "last_error_kind",
+        "last_error_detail",
+        "last_eval_path",
+        "needs_manual_review",
+    } <= columns
+    store.close()
 
 
 def test_crawl_task_default_politeness_rps_is_one(tmp_metadata: SqliteMetadataStore) -> None:

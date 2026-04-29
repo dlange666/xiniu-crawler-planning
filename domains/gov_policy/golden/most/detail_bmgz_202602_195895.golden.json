@@ -1,0 +1,13 @@
+{
+  "kind": "detail",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/bmgz/202602/t20260211_195895.html",
+  "title_contains": "科学技术活动违规行为调查处理规定",
+  "min_body_len": 5000,
+  "required_metadata": {
+    "索引号": "30650-2026-001",
+    "发文机构": "科技部",
+    "发布日期": "2026年02月11日",
+    "发文字号": "科学技术部令第24号"
+  },
+  "expected_min_interpret_links": 1
+}

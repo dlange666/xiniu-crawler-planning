@@ -1,0 +1,12 @@
+# MOST (科学技术部) 数据源种子
+# spec: docs/prod-spec/domain-gov-policy.md §8 + codegen-output-contract.md §3
+
+host: www.most.gov.cn
+business_context: gov_policy
+data_kind: policy
+politeness_rps: 0.3
+max_pages_per_run: 3
+scope_mode: same_origin
+crawl_mode: full
+entry_urls:
+  - https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/   # 法规政策-法律法规

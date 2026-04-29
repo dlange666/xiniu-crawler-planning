@@ -1,0 +1,13 @@
+{
+  "kind": "detail",
+  "url": "https://www.most.gov.cn/xxgk/xinxifenlei/fdzdgknr/fgzc/bmgz/202508/t20250805_194336.html",
+  "title_contains": "科技部关于废止部分规章的决定",
+  "min_body_len": 400,
+  "required_metadata": {
+    "索引号": "30642-2025-001",
+    "发文机构": "科技部",
+    "发布日期": "2025年08月05日",
+    "发文字号": "科学技术部令第23号"
+  },
+  "expected_min_interpret_links": 0
+}
