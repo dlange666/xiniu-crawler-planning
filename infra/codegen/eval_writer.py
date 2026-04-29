@@ -8,7 +8,7 @@ import textwrap
 from datetime import date, datetime
 from pathlib import Path
 
-from infra.codegen.paths import REPO, eval_artifact_path, slug
+from infra.codegen.paths import eval_artifact_path, slug
 from infra.codegen.shell import clip
 
 
@@ -21,6 +21,7 @@ def record_wrapper_eval(
     opencode_rc: int | None,
     gates: dict[str, bool],
     overall: bool,
+    repo_root: Path,
     gate_error: str | None = None,
     gate_details: dict[str, str] | None = None,
 ) -> Path:
@@ -45,7 +46,7 @@ def record_wrapper_eval(
     timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
     relative_log = log_file
     with contextlib.suppress(ValueError):
-        relative_log = log_file.relative_to(REPO)
+        relative_log = log_file.relative_to(repo_root)
 
     wrapper_section = textwrap.dedent(f"""\
 

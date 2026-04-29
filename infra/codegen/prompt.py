@@ -1,4 +1,4 @@
-"""生成 task JSON 骨架、per-task prompt 和 red feedback prompt。"""
+"""生成 task JSON 骨架与 per-task prompt。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ from infra.codegen.paths import (
     slug,
     task_artifact_path,
 )
-from infra.codegen.shell import clip
 
 
 def write_task_skeleton(worktree: Path, args: argparse.Namespace, branch: str) -> Path:
@@ -218,49 +217,3 @@ domains/{args.business_context}/{host_slug}/{host_slug}_seed.yaml \
     return f
 
 
-def write_feedback_prompt(
-    worktree: Path,
-    args: argparse.Namespace,
-    gate_run: GateRunResult,  # noqa: F821 — 循环导入避险，运行期不解引用
-    attempt: int,
-) -> Path:
-    failed = [name for name, ok in gate_run.results.items() if not ok]
-    sections: list[str] = []
-    for gate in failed:
-        output = gate_run.details.get(gate, "")
-        sections.append(f"### {gate}\n\n```text\n{clip(output, 6000)}\n```")
-    if not sections:
-        sections.append(
-            "No failed gate details were captured; rerun full gates and inspect output."
-        )
-    failed_output = "\n\n".join(sections)
-    path = worktree / ".codegen-feedback.md"
-    path.write_text(
-        textwrap.dedent(f"""\
-        # Wrapper red feedback attempt {attempt}
-
-        Wrapper gates 是最终判定。所有 gate 通过前不准写 green。
-        在当前 worktree 原地修复，不要重启任务、不要降阈值、不要改 `infra/`。
-
-        Failed gates: {", ".join(failed) if failed else "none"}
-
-        Required triage:
-
-        1. 修代码前先看下方失败 gate 输出。
-        2. audit short body 时判断 URL 是否在业务 scope 外；非业务链接（导航 /
-           搜索 / 社媒 / 移动入口）在 `parse_list` 过滤或收紧
-           `ADAPTER_META.detail_url_pattern`。
-        3. audit script noise 时修 `parse_detail`，让 `body_text` 排除 JS / CSS /
-           导航文本；不要靠污染文本去凑长度。
-        4. pytest 在 metadata 上挂时记得 `source_metadata` 是
-           `SourceMetadata(raw={{...}})`，测试读 `.raw`。
-        5. parser 改完后基于当前 adapter 重新生成成对 golden JSON；HTML/JSON 必须一一对应。
-        6. 全部修完后重跑 `.codegen-prompt.md` 的完整收口 gates。
-
-        ## Failed Gate Output
-
-        {failed_output}
-        """),
-        encoding="utf-8",
-    )
-    return path

@@ -7,8 +7,6 @@ import re
 from datetime import date
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
-
 
 def slug(host: str) -> str:
     """Return adapter slug identifying the source, not the delivery channel.

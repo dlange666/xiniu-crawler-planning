@@ -8,23 +8,19 @@ from pathlib import Path
 from typing import Any
 
 
-def _json_contains_key(value: Any, key: str) -> bool:
-    if isinstance(value, dict):
-        return key in value or any(_json_contains_key(v, key) for v in value.values())
-    if isinstance(value, list):
-        return any(_json_contains_key(v, key) for v in value)
-    return False
+def _has_pagination_signal(payload: Any) -> bool:
+    """检测 golden JSON 是否声明了非空分页结果。
 
-
-def _json_has_nonempty_next_pages(value: Any) -> bool:
-    if isinstance(value, dict):
-        next_pages = value.get("next_pages")
-        if isinstance(next_pages, list) and len(next_pages) > 0:
-            return True
-        return any(_json_has_nonempty_next_pages(v) for v in value.values())
-    if isinstance(value, list):
-        return any(_json_has_nonempty_next_pages(v) for v in value)
-    return False
+    只看 `payload["parse_list"]["next_pages"]` 这条精确路径，避免不相关的
+    嵌套结构被误判为分页信号。
+    """
+    if not isinstance(payload, dict):
+        return False
+    parse_list = payload.get("parse_list")
+    if not isinstance(parse_list, dict):
+        return False
+    next_pages = parse_list.get("next_pages")
+    return isinstance(next_pages, list) and len(next_pages) > 0
 
 
 def validate_golden_artifacts(artifacts_dir: Path, host_slug: str) -> tuple[bool, str]:
@@ -59,7 +55,7 @@ def validate_golden_artifacts(artifacts_dir: Path, host_slug: str) -> tuple[bool
             detail_pairs += 1
         if re.search(r"_golden_list_(?:[2-9]|\d{2,})$", stem) or "pagination" in stem:
             pagination_pairs += 1
-        if _json_contains_key(payload, "parse_list") and _json_has_nonempty_next_pages(payload):
+        if _has_pagination_signal(payload):
             pagination_signal = True
 
     if invalid_json:

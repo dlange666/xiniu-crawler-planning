@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from infra.codegen.eval_writer import record_wrapper_eval
-from infra.codegen.gates import GateRunResult
+from infra.codegen.gates import GateRunResult, write_feedback_prompt
 from infra.codegen.golden import validate_golden_artifacts
 from infra.codegen.paths import (
     adapter_artifact,
@@ -17,7 +17,6 @@ from infra.codegen.paths import (
     source_dir,
 )
 from infra.codegen.prompt import (
-    write_feedback_prompt,
     write_per_task_prompt,
     write_task_skeleton,
 )
@@ -288,10 +287,8 @@ def test_validate_golden_artifacts_requires_pagination_pair_when_signaled(
 
 
 def test_write_feedback_prompt_includes_failed_gate_evidence(tmp_path: Path) -> None:
-    args = argparse.Namespace(host="www.example.gov.cn", business_context="gov_policy")
     path = write_feedback_prompt(
         tmp_path,
-        args,
         GateRunResult(
             results={"pytest_new": False, "audit": False, "golden": True},
             details={
@@ -459,6 +456,7 @@ def test_record_wrapper_eval_creates_red_eval_when_missing(tmp_path: Path) -> No
         opencode_rc=1,
         gates={"pytest_all": True, "audit": False},
         overall=False,
+        repo_root=tmp_path,
     )
 
     assert eval_path.parent == tmp_path / "docs/eval-test"
@@ -482,6 +480,7 @@ def test_record_wrapper_eval_appends_to_existing_eval(tmp_path: Path) -> None:
         opencode_rc=0,
         gates={"pytest_all": True},
         overall=True,
+        repo_root=tmp_path,
     )
     eval_path.write_text("# Agent Eval\n\nagent content\n", encoding="utf-8")
 
@@ -493,6 +492,7 @@ def test_record_wrapper_eval_appends_to_existing_eval(tmp_path: Path) -> None:
         opencode_rc=0,
         gates={"golden": False},
         overall=False,
+        repo_root=tmp_path,
     )
 
     assert appended_path == eval_path

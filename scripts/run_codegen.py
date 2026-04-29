@@ -31,11 +31,10 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from infra.codegen.eval_writer import record_wrapper_eval  # noqa: E402
-from infra.codegen.gates import GateRunResult, run_gates  # noqa: E402
+from infra.codegen.gates import GateRunResult, run_gates, write_feedback_prompt  # noqa: E402
 from infra.codegen.opencode import invoke_opencode  # noqa: E402
 from infra.codegen.paths import slug  # noqa: E402
 from infra.codegen.prompt import (  # noqa: E402
-    write_feedback_prompt,
     write_per_task_prompt,
     write_task_skeleton,
 )
@@ -62,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["same_origin", "same_etld_plus_one", "url_pattern", "allowlist"],
     )
     ap.add_argument("--scope-url-pattern", default=None)
+    ap.add_argument("--data-kind", default="policy")
     ap.add_argument("--model", default="opencode/minimax-m2.5-free",
                     help="opencode 模型 ID，可换 sonnet / opus / 其它")
     ap.add_argument("--from-task-db", action="store_true",
@@ -92,7 +92,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
-    args = build_parser().parse_args()
+    ap = build_parser()
+    args = ap.parse_args()
+
+    # 这些字段在 --from-task-db 路径上由 apply_db_task_to_args 填充；
+    # 手动参数路径上 wrapper 直接用 None / argparse 默认值。
+    args.codegen_task_id = None
+    args.max_pages_per_run = None
+    args.politeness_rps = None
+    args.scope_description = None
 
     claimed_task: CodegenDbTask | None = None
     if args.from_task_db:
@@ -103,15 +111,10 @@ def main() -> int:
             sys.exit("no scheduled crawl_task found to claim")
         apply_db_task_to_args(args, claimed_task)
     elif not args.host or not args.entry_url:
-        build_parser().error("--host and --entry-url are required unless --from-task-db is set")
+        ap.error("--host and --entry-url are required unless --from-task-db is set")
 
     if args.smoke_task_id is None:
         args.smoke_task_id = int(time.strftime("%H%M%S"))
-    args.codegen_task_id = getattr(args, "codegen_task_id", None)
-    args.data_kind = getattr(args, "data_kind", "policy")
-    args.max_pages_per_run = getattr(args, "max_pages_per_run", None)
-    args.politeness_rps = getattr(args, "politeness_rps", None)
-    args.scope_description = getattr(args, "scope_description", None)
 
     host_slug = slug(args.host)
     task_suffix = f"-t{args.codegen_task_id}" if args.codegen_task_id is not None else ""
@@ -187,7 +190,7 @@ def main() -> int:
             if overall or args.skip_codegen or attempt >= attempts:
                 break
             feedback_file = write_feedback_prompt(
-                worktree, args, GateRunResult(gates, gate_details), attempt,
+                worktree, GateRunResult(gates, gate_details), attempt,
             )
             print(f"[codegen] wrote red feedback prompt: {feedback_file}")
 
@@ -199,6 +202,7 @@ def main() -> int:
             opencode_rc=opencode_rc,
             gates=gates,
             overall=overall,
+            repo_root=REPO,
             gate_error=gate_error,
             gate_details=gate_details,
         )
