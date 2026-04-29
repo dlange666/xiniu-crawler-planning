@@ -163,7 +163,7 @@ uv run python scripts/run_crawl_task.py \
 
 uv run python scripts/audit_crawl_quality.py \
   --task-id <smoke_task_id> \
-  --thresholds title_rate=0.95,body_500_rate=0.70,metadata_rate=0.30
+  --thresholds title_rate=0.95,body_100_rate=0.95,metadata_rate=0.30
 ```
 
 green 条件：

@@ -48,7 +48,7 @@ git diff --check
 | codegen task runner 单测 | `green`：11 passed |
 | ruff | `green`：All checks passed |
 | py_compile | `green`：exit 0 |
-| 全量测试 | `green`：92 passed |
+| 全量测试 | `green`：93 passed |
 | diff whitespace | `green`：无输出 |
 
 ## 5. 覆盖点
@@ -61,6 +61,7 @@ git diff --check
 | 非标准 JSON | 不猜测修复尾逗号等语义错误，返回 gate failure |
 | wrapper gates | `run_gates` 增加 `task_json` 结果 |
 | adapter 命名 | `wap.miit.gov.cn -> miit`，避免 `wap.py` 这类通用渠道名 |
+| audit 默认门 | 默认正文长度门使用 `body_100_rate`，`body_500_rate` 降为观测指标 |
 
 ## 6. 结论与决策
 

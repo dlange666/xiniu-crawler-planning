@@ -6,7 +6,7 @@
 
 用法：
     uv run python scripts/audit_crawl_quality.py --task-id 8888 \\
-        --thresholds title_rate=0.95,body_500_rate=0.70,metadata_rate=0.30
+        --thresholds title_rate=0.95,body_100_rate=0.95,metadata_rate=0.30
 
 阈值由调用方传入（不同业务域的"合格"标准不同）；缺省阈值见 DEFAULT_THRESHOLDS。
 """
@@ -23,7 +23,7 @@ from pathlib import Path
 
 DEFAULT_THRESHOLDS: dict[str, float] = {
     "title_rate": 0.95,        # title 非空记录占比
-    "body_500_rate": 0.70,     # body_text >= 500 字记录占比
+    "body_100_rate": 0.95,     # body_text >= 100 字记录占比
     "metadata_rate": 0.30,     # source_metadata.raw 非空记录占比
     # url 发现层
     "list_pages_min": 1,       # list_pages_fetched 至少这么多（翻页若适用）
@@ -57,6 +57,7 @@ def audit(*, db_path: Path, task_id: int) -> dict:
     n = len(rows)
     metrics = {
         "title_filled": 0,
+        "body_100": 0,
         "body_300": 0,
         "body_500": 0,
         "body_1000": 0,
@@ -69,7 +70,7 @@ def audit(*, db_path: Path, task_id: int) -> dict:
     host_counter: Counter[str] = Counter()
     cohort: dict[str, list[int]] = defaultdict(list)  # host → body lengths
 
-    for url, host, dlen, data in rows:
+    for url, host, _dlen, data in rows:
         d = json.loads(data)
         title = d.get("title", "")
         body = d.get("body_text", "")
@@ -80,6 +81,8 @@ def audit(*, db_path: Path, task_id: int) -> dict:
 
         if title.strip():
             metrics["title_filled"] += 1
+        if bl >= 100:
+            metrics["body_100"] += 1
         if bl >= 300:
             metrics["body_300"] += 1
         if bl >= 500:
@@ -105,6 +108,7 @@ def audit(*, db_path: Path, task_id: int) -> dict:
 
     rates = {
         "title_rate": metrics["title_filled"] / n,
+        "body_100_rate": metrics["body_100"] / n,
         "body_300_rate": metrics["body_300"] / n,
         "body_500_rate": metrics["body_500"] / n,
         "body_1000_rate": metrics["body_1000"] / n,
@@ -160,7 +164,7 @@ def evaluate(report: dict, thresholds: dict[str, float]) -> tuple[str, list[str]
 
 def render(report: dict, verdict: str, fails: list[str]) -> str:
     out: list[str] = []
-    out.append(f"=== crawl_raw quality audit ===")
+    out.append("=== crawl_raw quality audit ===")
     out.append(f"records: {report['records']}")
     if report["records"] == 0:
         out.append(f"reason:  {report.get('reason', 'no records')}")
