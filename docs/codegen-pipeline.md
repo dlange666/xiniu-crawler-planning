@@ -32,7 +32,7 @@ git-worktree -> plan -> task -> code -> gates -> eval -> PR handoff
 - adapter hook 必须是纯函数：不联网、不 sleep、不限流、不 retry；这些由 `infra/` 处理。
 - 探查必须使用 `scripts/probe_source.py`，artifact 只能写在 `runtime/probe/<host_slug>/`。
 - 所有写入必须在当前 worktree 且落入 §2 允许范围；禁止写 `/tmp`、父目录、其它 worktree。
-- 不 import 其它业务域；不修改已有 adapter；不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。
+- 不 import 其它业务域；不修改已有 adapter；不修改 `infra/`、`AGENTS.md`、`CLAUDE.md`、`pyproject.toml`。这里的 `infra/` 指 capability 模块（`infra/adapter_registry/`、`infra/crawl/`、`infra/storage/` 等）；`infra/codegen/` 是 wrapper 自身代码，agent 任务中也不应触达。
 - 任务 ID 必须是完整 `T-YYYYMMDD-NNN`。
 - 任一 gate/audit 失败时，eval 必须是 `red` 或 `partial`；禁止自判 green。
 - 未跑 live smoke + audit 禁止 green；只凭单测/registry 通过禁止 green。

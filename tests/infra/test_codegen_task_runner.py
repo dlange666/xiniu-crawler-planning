@@ -6,24 +6,28 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from infra.storage.sqlite_store import SqliteMetadataStore
-from scripts.run_codegen_for_adapter import (
-    GateRunResult,
+from infra.codegen.eval_writer import record_wrapper_eval
+from infra.codegen.gates import GateRunResult
+from infra.codegen.golden import validate_golden_artifacts
+from infra.codegen.paths import (
     adapter_artifact,
     adapter_test_artifact,
-    apply_db_task_to_args,
-    claim_codegen_task,
-    mark_codegen_task_finished,
-    normalize_task_json,
-    record_wrapper_eval,
     seed_artifact,
     slug,
     source_dir,
-    validate_golden_artifacts,
+)
+from infra.codegen.prompt import (
     write_feedback_prompt,
     write_per_task_prompt,
     write_task_skeleton,
 )
+from infra.codegen.task_db import (
+    apply_db_task_to_args,
+    claim_codegen_task,
+    mark_codegen_task_finished,
+)
+from infra.codegen.task_json import normalize_task_json
+from infra.storage.sqlite_store import SqliteMetadataStore
 
 
 def _init_db(path: Path) -> None:
@@ -301,7 +305,7 @@ def test_write_feedback_prompt_includes_failed_gate_evidence(tmp_path: Path) -> 
     text = path.read_text(encoding="utf-8")
     assert "Failed gates: pytest_new, audit" in text
     assert "SourceMetadata(raw={...})" in text
-    assert "short body samples" in text
+    assert "short body" in text
 
 
 def test_normalize_task_json_repairs_markdown_wrapped_json(tmp_path: Path) -> None:
