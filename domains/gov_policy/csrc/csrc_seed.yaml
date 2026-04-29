@@ -1,0 +1,9 @@
+scope_mode: same_origin
+politeness_rps: 1.0
+max_pages_per_run: 30
+crawl_mode: full
+entry_urls:
+  - "http://www.csrc.gov.cn/csrc/c106256/fg.shtml"
+business_context: gov_policy
+data_kind: policy
+host: www.csrc.gov.cn

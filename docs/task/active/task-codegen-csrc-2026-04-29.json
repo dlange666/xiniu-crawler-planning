@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "file_kind": "pr-task-file",
+  "description": "codegen-csrc: 为 www.csrc.gov.cn 生成采集适配器。",
+  "pr_name": "codegen-csrc",
+  "branch": "agent/feature-20260429-codegen-csrc-t9",
+  "date": "2026-04-29",
+  "status_enum": [
+    "pending",
+    "in_progress",
+    "verifying",
+    "completed",
+    "failed"
+  ],
+  "tasks": [
+    {
+      "id": "T-20260429-701",
+      "title": "[codegen/csrc] 生成并验收采集适配器",
+      "status": "completed",
+      "plan_id": "plan-20260429-codegen-csrc",
+      "spec_ref": "codegen-output-contract.md §3.1；docs/codegen-pipeline.md §4",
+      "dependency": [],
+      "assignee": "generator",
+      "last_updated": "2026-04-29T16:56:00+08:00",
+      "notes": "codegen wrapper gates green；人工复核后补充分页识别并重跑 gates 通过；PR #18 已创建。"
+    }
+  ]
+}
